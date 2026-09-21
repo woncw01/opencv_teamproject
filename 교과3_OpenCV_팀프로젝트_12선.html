@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교과 3 OpenCV 팀 프로젝트 12선</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F6F7F9;--ink:#1B2330;--muted:#5A6474;--line:#DCE1E7;--rail:#17212E;--accent:#0E7C86;--code:#101820;
+--f:'IBM Plex Sans KR',system-ui,'Malgun Gothic',sans-serif;--m:'JetBrains Mono',Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.75;word-break:keep-all}
+a{color:var(--accent)}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #F2B84B;outline-offset:2px}
+.rail{position:fixed;inset:0 auto 0 0;width:272px;background:var(--rail);color:#C9D3DE;overflow-y:auto;padding:22px 14px 40px;font-size:14px;line-height:1.5}
+.rail-title{color:#fff;font-weight:700;font-size:16px;margin:0 8px 14px}
+.rail ul{list-style:none;margin:0 0 10px;padding:0}.rail a{display:block;color:#C9D3DE;text-decoration:none;padding:5px 8px;border-radius:6px}
+.rail a:hover{background:#223040;color:#fff}.rail a.on{background:#223040;color:#fff;box-shadow:inset 3px 0 0 #4FC1CB}
+.rail b{color:#8FA3B8;font-weight:600;margin-right:4px}
+.rail-lv{margin:16px 8px 4px;font-size:12.5px;font-weight:700;color:#fff;border-left:4px solid var(--lv);padding-left:8px}
+.rail-end{border-top:1px solid #2A3A4C;padding-top:10px!important;margin-top:14px!important}
+.menu{display:none}
+main{margin-left:272px;padding:0 48px 80px}
+.wrap{max-width:860px}
+.hero{padding:52px 0 28px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.course{color:var(--accent);font-weight:600;margin:0 0 6px}
+h1{font-size:40px;line-height:1.2;margin:0 0 12px;letter-spacing:-.5px}
+.hero-sub{font-size:18px;color:var(--muted);margin:0 0 26px;max-width:640px}
+.lane{width:100%;height:auto;display:block;font-family:var(--f)}.lane .chip{transition:fill .15s}.lane a:hover .chip{fill:#E1EEF0}
+h2{font-size:28px;margin:56px 0 14px;line-height:1.3}
+h3{font-size:20px;margin:34px 0 10px}
+h4{font-size:16px;margin:26px 0 6px;color:var(--ink)}
+code{font-family:var(--m);font-size:.86em;background:#E8EBEF;padding:1px 5px;border-radius:4px}
+kbd{font-family:var(--m);font-size:.82em;border:1px solid #B8C0CA;border-bottom-width:2px;border-radius:4px;padding:0 5px;background:#fff}
+.tbl{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:#fff}
+.grid th,.grid td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+.grid thead th{background:#EDF0F3;font-weight:700}.grid td.num{text-align:right;font-weight:700}
+.lvdot{display:inline-block;color:var(--lv);font-weight:700;white-space:nowrap}
+.code{margin:12px 0 16px;border-radius:8px;overflow:hidden;background:var(--code)}
+.code-bar{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#1B2733;font-size:12.5px}
+.env{padding:2px 8px;border-radius:4px;font-weight:600}
+.env-conda{background:#1F6F43;color:#E5F6EC}.env-py{background:#2A5C8F;color:#E6F0FA}.env-txt{background:#5B4A86;color:#EFEAFA}.env-out{background:#4A5563;color:#E8ECF0}
+.fname{color:#AEBBC8;font-family:var(--m)}
+.copy{margin-left:auto;background:#2C3A48;color:#DDE5ED;border:0;border-radius:4px;padding:3px 10px;font:inherit;cursor:pointer}.copy:hover{background:#3A4B5D}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto}
+.code pre code{background:none;padding:0;color:#E3E9EF;font-size:13.5px;line-height:1.6}
+.code.out{background:#F0F2F4;border:1px solid var(--line)}.code.out .code-bar{background:#E3E7EB}.code.out pre code{color:#26303C}
+.call{margin:18px 0;padding:14px 18px;border-radius:8px;border-left:5px solid}
+.call-t{margin:0 0 4px;font-weight:700}.call p:last-child,.call ul:last-child{margin-bottom:0}
+.call-concept{background:#EAF2FA;border-color:#2A67A8}.call-tip{background:#EAF5EE;border-color:#2F7D55}.call-warn{background:#FCF3E4;border-color:#C98A1B}
+.call ul{padding-left:20px;margin:6px 0}
+.lvband{margin:80px 0 8px;padding:26px 28px;border-radius:12px;background:var(--lv);color:#fff}
+.lvband h2{margin:0 0 6px;font-size:30px}.lvband p{margin:0}.lvband-n{font-weight:600;opacity:.9;margin-bottom:2px!important}
+.proj{margin:40px 0 0;padding:30px 32px 26px;background:#fff;border:1px solid var(--line);border-top:6px solid var(--lv);border-radius:10px}
+.proj-id{margin:0;font-family:var(--m);font-weight:700;color:var(--lv);font-size:15px}
+.proj-h h3{margin:2px 0 8px;font-size:24px}
+.proj-meta{margin:0;display:flex;flex-wrap:wrap;gap:8px;font-size:14px;color:var(--muted)}
+.proj-meta span{background:#F1F3F6;border-radius:5px;padding:2px 9px}.proj-meta .lvtag{color:var(--lv);font-weight:700}
+.lead{font-size:17px;margin:18px 0 4px;padding-bottom:6px}
+.must{padding-left:22px}.must li{margin:6px 0}.must li::marker{color:var(--lv);font-weight:700}
+.extra{padding-left:20px}.extra li{margin:4px 0}
+.tech th{width:112px;background:#F6F7F9;border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;font-size:14px}
+.tech td{border:1px solid var(--line);padding:8px 12px;font-size:14.5px}
+.days{list-style:none;padding:0;margin:8px 0;border-left:2px solid var(--line)}
+.days li{display:flex;gap:14px;padding:5px 0 5px 14px;position:relative}
+.days li::before{content:"";position:absolute;left:-6px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--lv,var(--accent))}
+.dn{flex:0 0 52px;font-family:var(--m);font-weight:700;font-size:13.5px;color:var(--lv,var(--accent));padding-top:2px}
+.days.wide small{color:var(--muted)}
+details.hint{margin:20px 0 10px;border:1px solid #E8D9B8;background:#FFFAF0;border-radius:8px}
+details.hint summary{cursor:pointer;padding:10px 16px;font-weight:700;color:#7A5410}
+details.hint ul{margin:0;padding:0 18px 12px 36px}details.hint li{margin:6px 0}
+.next{margin:16px 0 0;padding:12px 16px;background:#F1F5F6;border-radius:8px;font-size:15px}
+.check{list-style:none;padding:0}.check li{padding:8px 12px;border:1px solid var(--line);background:#fff;border-radius:6px;margin:6px 0}
+.check label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.check input{margin-top:7px;accent-color:var(--accent)}
+footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:980px){.rail{transform:translateX(-100%);transition:transform .2s;z-index:20}.rail.open{transform:none}
+ main{margin-left:0;padding:0 18px 60px}.menu{display:block;position:fixed;right:14px;bottom:14px;z-index:30;background:var(--rail);color:#fff;border:0;border-radius:24px;padding:10px 18px;font:inherit;font-weight:600}
+ h1{font-size:30px}.proj{padding:22px 18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{.rail,.menu,.copy{display:none!important}main{margin:0;padding:0}.proj,.code,.call,table{break-inside:avoid}
+ .lvband{break-before:page}body{font-size:11pt;background:#fff}.code{background:#fff;border:1px solid #999}.code pre code{color:#000}.code-bar{background:#eee}}
+</style></head>
+<body>
+<nav class="rail" id="rail" aria-label="문서 목차"><p class="rail-title">OpenCV 팀 프로젝트</p><ul><li><a href="#intro">프로젝트 안내</a></li><li><a href="#pick">우리 팀 난이도 고르기</a></li><li><a href="#env">개발 환경 준비</a></li><li><a href="#common">공통 코드</a></li><li><a href="#rules">프로젝트 규칙</a></li><li><a href="#schedule">5일 진행 일정</a></li><li><a href="#grade">평가 기준</a></li></ul><p class="rail-lv" style="--lv:#2F7D55">Level 1 · 입문</p><ul><li><a href="#p01"><b>P01</b> 데이터셋 품질 점검 · 썸네일 시트 생성기</a></li><li><a href="#p02"><b>P02</b> 조명 얼룩 보정 · 이진화 방법 비교 도구</a></li><li><a href="#p03"><b>P03</b> 색상으로 분류하고 개수 세기</a></li></ul><p class="rail-lv" style="--lv:#2A67A8">Level 2 · 초중급</p><ul><li><a href="#p04"><b>P04</b> 실시간 영상 필터 스튜디오 · FPS 측정기</a></li><li><a href="#p05"><b>P05</b> 미니 라벨링 툴</a></li><li><a href="#p06"><b>P06</b> 문서·라벨 자동 평면화 스캐너</a></li></ul><p class="rail-lv" style="--lv:#A86A12">Level 3 · 중상급</p><ul><li><a href="#p07"><b>P07</b> 기준 영상 비교 결함 검사기</a></li><li><a href="#p08"><b>P08</b> 특징점 매칭 파노라마 · 물체 찾기</a></li><li><a href="#p09"><b>P09</b> 통과 개수 세기</a></li></ul><p class="rail-lv" style="--lv:#A8342A">Level 4 · 고급</p><ul><li><a href="#p10"><b>P10</b> 컨베이어 이물 검출 시스템 시제품</a></li><li><a href="#p11"><b>P11</b> 작업장 안전 감시</a></li><li><a href="#p12"><b>P12</b> 실시간 처리 속도 최적화</a></li></ul><ul class="rail-end"><li><a href="#list">전체 주제 한눈에 보기</a></li><li><a href="#submit">최종 제출 체크리스트</a></li></ul></nav>
+<button class="menu" id="menu" type="button" aria-controls="rail">목차</button>
+<main><div class="wrap">
+
+<header class="hero" id="top">
+  <p class="course">KDT AI캠퍼스 · 교과 3 이미지 프로세싱(OpenCV)</p>
+  <h1>OpenCV 팀 프로젝트 12선</h1>
+  <p class="hero-sub">2~3명이 한 팀이 되어 5일 동안 하나의 비전 프로그램을 완성합니다. 난이도 4단계 중 우리 팀에 맞는 주제를 고르세요.</p>
+  <svg viewBox="0 0 1000 250" role="img" aria-label="난이도 4단계 프로젝트 지도" class="lane"><rect x="0" y="176" width="1000" height="22" rx="11" fill="#243140"/><rect x="20" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="58" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="96" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="134" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="172" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="210" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="248" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="286" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="324" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="362" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="400" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="438" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="476" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="514" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="552" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="590" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="628" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="666" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="704" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="742" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="780" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="818" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="856" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="894" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="932" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="970" y="185" width="18" height="4" rx="2" fill="#3C4E62"/><rect x="18" y="18" width="226" height="148" rx="10" fill="#fff" stroke="#2F7D55" stroke-width="2"/><rect x="18" y="18" width="226" height="34" rx="10" fill="#2F7D55"/><rect x="18" y="40" width="226" height="12" fill="#2F7D55"/><text x="32" y="41" fill="#fff" font-size="15" font-weight="700">Level 1 · 입문</text><text x="230" y="41" fill="#fff" font-size="13" text-anchor="end">★☆☆☆</text><a href="#p01"><rect x="30" y="64" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="40" y="82" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2F7D55">P01</tspan>  데이터셋 품질 점검</text></a><a href="#p02"><rect x="30" y="96" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="40" y="114" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2F7D55">P02</tspan>  조명 얼룩 보정</text></a><a href="#p03"><rect x="30" y="128" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="40" y="146" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2F7D55">P03</tspan>  색상으로 분류하고 개수 세기</text></a><rect x="126" y="166" width="10" height="10" fill="#2F7D55"/><rect x="264" y="18" width="226" height="148" rx="10" fill="#fff" stroke="#2A67A8" stroke-width="2"/><rect x="264" y="18" width="226" height="34" rx="10" fill="#2A67A8"/><rect x="264" y="40" width="226" height="12" fill="#2A67A8"/><text x="278" y="41" fill="#fff" font-size="15" font-weight="700">Level 2 · 초중급</text><text x="476" y="41" fill="#fff" font-size="13" text-anchor="end">★★☆☆</text><a href="#p04"><rect x="276" y="64" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="286" y="82" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2A67A8">P04</tspan>  실시간 영상 필터 스튜디오</text></a><a href="#p05"><rect x="276" y="96" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="286" y="114" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2A67A8">P05</tspan>  미니 라벨링 툴</text></a><a href="#p06"><rect x="276" y="128" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="286" y="146" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#2A67A8">P06</tspan>  문서·라벨 자동 평면화 스…</text></a><rect x="372" y="166" width="10" height="10" fill="#2A67A8"/><rect x="510" y="18" width="226" height="148" rx="10" fill="#fff" stroke="#A86A12" stroke-width="2"/><rect x="510" y="18" width="226" height="34" rx="10" fill="#A86A12"/><rect x="510" y="40" width="226" height="12" fill="#A86A12"/><text x="524" y="41" fill="#fff" font-size="15" font-weight="700">Level 3 · 중상급</text><text x="722" y="41" fill="#fff" font-size="13" text-anchor="end">★★★☆</text><a href="#p07"><rect x="522" y="64" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="532" y="82" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A86A12">P07</tspan>  기준 영상 비교 결함 검사기</text></a><a href="#p08"><rect x="522" y="96" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="532" y="114" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A86A12">P08</tspan>  특징점 매칭 파노라마</text></a><a href="#p09"><rect x="522" y="128" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="532" y="146" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A86A12">P09</tspan>  통과 개수 세기</text></a><rect x="618" y="166" width="10" height="10" fill="#A86A12"/><rect x="756" y="18" width="226" height="148" rx="10" fill="#fff" stroke="#A8342A" stroke-width="2"/><rect x="756" y="18" width="226" height="34" rx="10" fill="#A8342A"/><rect x="756" y="40" width="226" height="12" fill="#A8342A"/><text x="770" y="41" fill="#fff" font-size="15" font-weight="700">Level 4 · 고급</text><text x="968" y="41" fill="#fff" font-size="13" text-anchor="end">★★★★</text><a href="#p10"><rect x="768" y="64" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="778" y="82" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A8342A">P10</tspan>  컨베이어 이물 검출 시스템…</text></a><a href="#p11"><rect x="768" y="96" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="778" y="114" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A8342A">P11</tspan>  작업장 안전 감시</text></a><a href="#p12"><rect x="768" y="128" width="202" height="26" rx="5" fill="#F2F4F7" class="chip"/><text x="778" y="146" font-size="13" fill="#1B2330"><tspan font-weight="700" fill="#A8342A">P12</tspan>  실시간 처리 속도 최적화</text></a><rect x="864" y="166" width="10" height="10" fill="#A8342A"/><text x="500" y="232" text-anchor="middle" font-size="13" fill="#5A6474">왼쪽에서 오른쪽으로 갈수록 다루는 기술이 늘어납니다 · 칩을 누르면 해당 프로젝트로 이동합니다</text></svg>
+</header>
+
+<section id="intro"><h2>프로젝트 안내</h2>
+<p>이 프로젝트는 교과 3에서 배운 OpenCV 기술을 <strong>실제로 쓸 수 있는 도구 하나</strong>로 묶어 보는 시간입니다. 12개 주제는 모두 앞으로 이어질 교과 7(라벨링), 교과 9(머신비전), 교과 14·15(최종 프로젝트)와 연결되어 있어서, 여기서 만든 코드를 뒤에서 다시 쓰게 됩니다.</p>
+<div class="tbl"><table class="grid"><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody>
+<tr><td>팀 구성</td><td>2~3명 (주제마다 권장 인원이 있습니다)</td></tr>
+<tr><td>기간</td><td>5일</td></tr>
+<tr><td>개발 환경</td><td>Windows 11 + Anaconda 가상환경, Python 3.9 또는 3.10</td></tr>
+<tr><td>사용 라이브러리</td><td>OpenCV(contrib 포함), NumPy, pandas, matplotlib</td></tr>
+<tr><td>결과 공유</td><td>팀 GitHub 저장소 1개</td></tr>
+</tbody></table></div>
+<aside class="call call-concept"><p class="call-t">이번 프로젝트에서는 딥러닝을 쓰지 않습니다</p><p>YOLO나 CNN 같은 딥러닝 모델은 교과 5와 교과 8에서 배웁니다. 이번에는 <strong>규칙(임계값, 색 범위, 모양 조건)만으로 어디까지 풀 수 있는지</strong> 직접 확인하는 것이 목적입니다. 규칙으로 풀리지 않는 지점을 정확히 찾아내면, 나중에 딥러닝이 왜 필요한지 훨씬 빨리 이해하게 됩니다.</p></aside>
+<h3>팀 안의 역할</h3>
+<div class="tbl"><table class="grid"><thead><tr><th>역할</th><th>맡는 일</th></tr></thead><tbody>
+<tr><td>비전 처리 담당</td><td>전처리, 검출, 판정 같은 핵심 영상 처리 코드</td></tr>
+<tr><td>입출력·화면 담당</td><td>파일 읽기·저장, 화면 구성, 트랙바·키 입력, 로그 기록</td></tr>
+<tr><td>데이터·검증 담당</td><td>데이터 수집·정리, 정답표 작성, 실험 기록, 문서와 발표 (3명 팀만 따로 둡니다)</td></tr>
+</tbody></table></div>
+<p>역할은 일을 나누는 칸막이가 아니라 <strong>책임자를 정하는 것</strong>입니다. 코드는 모두가 씁니다. 2명 팀은 팀장이 비전 처리와 데이터·검증을 함께 맡습니다.</p>
+</section>
+
+<section id="pick"><h2>우리 팀 난이도 고르기</h2>
+<p>아래 질문에 팀원 모두가 "예"라고 답할 수 있는 가장 높은 단계를 고르세요. 한 단계 낮게 골라 도전 기능까지 완성하는 편이, 높은 단계에서 필수 기능을 다 못 끝내는 것보다 점수가 좋습니다.</p>
+<div class="tbl"><table class="grid pick"><thead><tr><th>단계</th><th>이렇게 할 수 있다면</th><th>주제</th></tr></thead><tbody><tr><td><span class="lvdot" style="--lv:#2F7D55">Level 1</span><br><small>입문</small></td><td>파이썬 반복문·함수·리스트·딕셔너리를 쓸 수 있고, <code>cv2.imread</code>와 <code>cv2.imshow</code>로 이미지를 띄워 봤다.</td><td>P01, P02, P03</td></tr><tr><td><span class="lvdot" style="--lv:#2A67A8">Level 2</span><br><small>초중급</small></td><td>NumPy 슬라이싱으로 이미지 일부를 잘라낼 수 있고, <code>while</code> 반복으로 영상을 한 프레임씩 처리하는 구조를 이해한다.</td><td>P04, P05, P06</td></tr><tr><td><span class="lvdot" style="--lv:#A86A12">Level 3</span><br><small>중상급</small></td><td>Canny와 <code>findContours</code> 결과를 보고 무엇이 잡혔는지 설명할 수 있고, 코드를 여러 함수로 나눠 쓸 수 있다.</td><td>P07, P08, P09</td></tr><tr><td><span class="lvdot" style="--lv:#A8342A">Level 4</span><br><small>고급</small></td><td>팀에 Git 브랜치와 Pull Request를 쓸 줄 아는 사람이 있고, 클래스를 설계해 본 경험이 있다.</td><td>P10, P11, P12</td></tr></tbody></table></div>
+<aside class="call call-tip"><p class="call-t">주제 신청</p><p>팀마다 1순위·2순위 주제를 적어 제출합니다. 같은 주제는 한 반에서 최대 2팀까지만 배정되므로 2순위도 꼭 적으세요.</p></aside>
+</section>
+
+<section id="env"><h2>개발 환경 준비</h2>
+<p>모든 작업은 <strong>Windows의 Anaconda 가상환경</strong>에서 합니다. Python은 <strong>3.9 또는 3.10</strong>을 씁니다. 팀원 모두가 같은 버전을 써야 "내 컴퓨터에서는 되는데" 문제가 생기지 않습니다. 팀 안에서 하나로 정하세요.</p>
+<h3>1단계 · 가상환경 만들기</h3>
+<p>시작 메뉴에서 <strong>Anaconda Prompt</strong>를 엽니다. 팀이 3.10을 쓰기로 했다면 아래처럼 입력합니다. 3.9를 쓴다면 <code>python=3.9</code>로 바꾸세요.</p>
+<div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>conda create -n cvteam python=3.10 -y
+conda activate cvteam</code></pre></div>
+<p>명령 줄 맨 앞이 <code>(base)</code>에서 <code>(cvteam)</code>으로 바뀌면 성공입니다. Anaconda Prompt를 새로 열 때마다 <code>conda activate cvteam</code>을 다시 입력해야 합니다.</p>
+<h3>2단계 · 필요한 패키지 설치</h3>
+<p>프로젝트 폴더에 아래 내용으로 <code>requirements.txt</code>를 만듭니다. 버전까지 고정해 두면 팀원 모두 똑같은 환경이 됩니다. 이 조합은 Python 3.9와 3.10 모두에서 설치·실행을 확인했습니다.</p>
+<div class="code"><div class="code-bar"><span class="env env-txt">텍스트 파일</span><span class="fname">requirements.txt</span><button class="copy" type="button">복사</button></div><pre><code>opencv-contrib-python==4.10.0.84
+numpy==1.26.4
+pandas==2.2.2
+matplotlib==3.8.4</code></pre></div><div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>cd C:\cv_project\team_project
+pip install -r requirements.txt</code></pre></div><aside class="call call-warn"><p class="call-t">opencv-python과 opencv-contrib-python을 함께 설치하지 마세요</p><p>두 패키지는 같은 <code>cv2</code> 폴더를 쓰기 때문에 함께 깔리면 SIFT나 CSRT 추적기가 사라지는 등 이상하게 동작합니다. 이미 둘 다 깔려 있다면 모두 지우고 contrib 하나만 다시 설치하세요.</p><div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>pip uninstall opencv-python opencv-contrib-python -y
+pip install opencv-contrib-python==4.10.0.84</code></pre></div></aside>
+<h3>3단계 · 환경 점검</h3>
+<p>아래 파일을 만들어 실행합니다.</p>
+<div class="code"><div class="code-bar"><span class="env env-py">Python 파일</span><span class="fname">check_env.py</span><button class="copy" type="button">복사</button></div><pre><code># check_env.py — 개발 환경 점검 스크립트
+import sys
+
+import cv2
+import numpy as np
+
+print(f&quot;Python  : {sys.version.split()[0]}&quot;)
+print(f&quot;OpenCV  : {cv2.__version__}&quot;)
+print(f&quot;NumPy   : {np.__version__}&quot;)
+
+if sys.version_info[:2] not in [(3, 9), (3, 10)]:
+    print(&quot;[주의] 이 과정은 Python 3.9 또는 3.10 기준입니다.&quot;)
+
+print(f&quot;SIFT    : {&#x27;사용 가능&#x27; if hasattr(cv2, &#x27;SIFT_create&#x27;) else &#x27;없음&#x27;}&quot;)
+has_csrt = hasattr(cv2, &quot;legacy&quot;) and hasattr(cv2.legacy, &quot;TrackerCSRT_create&quot;)
+print(f&quot;CSRT    : {&#x27;사용 가능&#x27; if has_csrt else &#x27;없음 → opencv-contrib-python 설치 확인&#x27;}&quot;)
+
+img = np.zeros((120, 240, 3), dtype=np.uint8)
+cv2.putText(img, &quot;OpenCV OK&quot;, (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+ok = cv2.imwrite(&quot;env_test.png&quot;, img)
+print(f&quot;이미지 저장: {&#x27;성공&#x27; if ok else &#x27;실패&#x27;} (env_test.png)&quot;)</code></pre></div><div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>python check_env.py</code></pre></div><div class="code out"><div class="code-bar"><span class="env env-out">실행 결과</span><button class="copy" type="button">복사</button></div><pre><code>Python  : 3.10.20
+OpenCV  : 4.10.0
+NumPy   : 1.26.4
+SIFT    : 사용 가능
+CSRT    : 사용 가능
+이미지 저장: 성공 (env_test.png)</code></pre></div>
+<p>Python 뒤의 세부 숫자(예: 3.10.<b>20</b>)는 설치한 시점에 따라 다를 수 있습니다. <strong>3.9 또는 3.10</strong>이고, SIFT와 CSRT가 모두 "사용 가능"이면 준비 완료입니다.</p>
+<h3>4단계 · VS Code에서 가상환경 연결</h3>
+<p>VS Code에서 프로젝트 폴더를 연 뒤 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> → <code>Python: Select Interpreter</code> → <code>cvteam</code>이 들어간 항목을 고릅니다. 화면 오른쪽 아래에 <code>3.10.x ('cvteam')</code>처럼 표시되면 연결된 것입니다.</p>
+<h3>5단계 · 웹캠 확인</h3>
+<p>영상을 쓰는 주제(P04 · P05 · P06 · P09 · P10 · P11 · P12)는 웹캠이 켜지는지 먼저 확인합니다. 아래 <a href="#common">공통 코드</a>의 <code>main.py</code>와 <code>utils.py</code>를 받은 뒤 실행하세요.</p>
+<div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>python src\main.py --source 0</code></pre></div><aside class="call call-tip"><p class="call-t">웹캠 화면이 안 뜰 때</p><ul><li><code>--source 1</code>로 바꿔 보세요. 노트북 내장 카메라와 USB 카메라가 함께 있으면 번호가 바뀝니다.</li><li>Windows <strong>설정 → 개인 정보 및 보안 → 카메라</strong>에서 데스크톱 앱의 카메라 접근이 켜져 있는지 확인하세요.</li><li>Zoom, Teams, 카메라 앱처럼 카메라를 쓰는 다른 프로그램이 켜져 있으면 모두 끄세요.</li></ul></aside>
+<h3>Python 3.9에서도 돌아가게 쓰기</h3>
+<p>팀원 중 3.9를 쓰는 사람이 있다면 아래 문법은 피하세요. 3.10에서만 동작합니다.</p>
+<div class="tbl"><table class="grid"><thead><tr><th>피할 문법 (3.10 전용)</th><th>대신 쓸 것</th></tr></thead><tbody>
+<tr><td><code>match 값:</code> / <code>case ...:</code></td><td><code>if / elif</code> 또는 함수 딕셔너리</td></tr>
+<tr><td><code>def f(x: int | None)</code></td><td><code>from typing import Optional</code> → <code>def f(x: Optional[int])</code></td></tr>
+<tr><td><code>isinstance(x, int | float)</code></td><td><code>isinstance(x, (int, float))</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="common"><h2>공통 코드</h2>
+<p>모든 팀이 똑같이 겪는 문제(한글 경로, 입력 전환, FPS 계산, 설정 파일 읽기)를 해결하는 도우미 함수입니다. <code>src/utils.py</code>로 그대로 복사해서 쓰세요. Python 3.9와 3.10에서 실행을 확인한 코드입니다.</p>
+<p>함께 배포되는 <strong>공통 스타터 패키지</strong>(<code>공통_스타터_team_project.zip</code>)에 아래 파일들이 폴더 구조대로 들어 있습니다. 압축을 풀고 폴더 이름을 팀 주제에 맞게 바꾼 뒤 시작하세요. <strong>모든 명령은 이 프로젝트 폴더에서 실행</strong>합니다.</p>
+<div class="code"><div class="code-bar"><span class="env env-py">Python 파일</span><span class="fname">src/utils.py</span><button class="copy" type="button">복사</button></div><pre><code># utils.py — 모든 팀이 공통으로 쓰는 도우미 함수
+import json
+import os
+import time
+from collections import deque
+
+import cv2
+import numpy as np
+
+
+def imread_unicode(path, flags=cv2.IMREAD_COLOR):
+    &quot;&quot;&quot;한글이 들어간 경로도 읽을 수 있는 imread. 실패하면 None.&quot;&quot;&quot;
+    if not os.path.exists(path):
+        return None
+    data = np.fromfile(path, dtype=np.uint8)
+    return cv2.imdecode(data, flags)
+
+
+def imwrite_unicode(path, img, params=None):
+    &quot;&quot;&quot;한글이 들어간 경로에도 저장할 수 있는 imwrite. 성공하면 True.&quot;&quot;&quot;
+    ext = os.path.splitext(path)[1]
+    ok, buf = cv2.imencode(ext, img, params or [])
+    if ok:
+        buf.tofile(path)
+    return ok
+
+
+def open_source(source):
+    &quot;&quot;&quot;&#x27;0&#x27;,&#x27;1&#x27; 같은 숫자면 웹캠, 그 외에는 동영상 파일로 연다.&quot;&quot;&quot;
+    if str(source).isdigit():
+        # Windows에서는 DirectShow(CAP_DSHOW)로 열면 카메라가 빨리 켜집니다.
+        cap = cv2.VideoCapture(int(source), cv2.CAP_DSHOW)
+    else:
+        cap = cv2.VideoCapture(source)
+    if not cap.isOpened():
+        raise SystemExit(f&quot;[ERROR] 입력을 열 수 없습니다: {source}&quot;)
+    return cap
+
+
+class FPSMeter:
+    &quot;&quot;&quot;최근 N프레임 이동평균으로 FPS를 계산한다.&quot;&quot;&quot;
+
+    def __init__(self, window=30):
+        self.intervals = deque(maxlen=window)
+        self.last = time.perf_counter()
+
+    def tick(self):
+        now = time.perf_counter()
+        self.intervals.append(now - self.last)
+        self.last = now
+        total = sum(self.intervals)
+        return len(self.intervals) / total if total &gt; 0 else 0.0
+
+
+def load_config(path=None):
+    &quot;&quot;&quot;조정할 값들을 config.json에서 읽어 딕셔너리로 돌려준다.
+    path를 주지 않으면 프로젝트 폴더(src의 상위)의 config.json을 읽는다.&quot;&quot;&quot;
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), &quot;..&quot;, &quot;config.json&quot;)
+    with open(path, encoding=&quot;utf-8&quot;) as f:
+        return json.load(f)</code></pre></div><aside class="call call-concept"><p class="call-t">imread_unicode가 왜 필요한가요?</p><p>Windows에서 <code>cv2.imread</code>는 경로에 한글이 들어 있으면 오류 없이 <code>None</code>을 돌려줍니다. 그다음 줄에서 <code>img.shape</code>를 부르면 <code>'NoneType' object has no attribute 'shape'</code> 오류가 납니다. <code>imread_unicode</code>는 파일을 바이트로 먼저 읽고 <code>cv2.imdecode</code>로 해석해서 이 문제를 피합니다.</p></aside>
+<h3>영상 주제의 시작 뼈대</h3>
+<p>웹캠과 동영상 파일을 <code>--source</code> 인자 하나로 바꿀 수 있게 만든 기본 구조입니다. <code>process()</code> 함수 안만 채우면 됩니다. 녹화해 둔 영상 파일로 시험하면 같은 조건에서 몇 번이고 다시 잴 수 있어서 기준값을 조정할 때 훨씬 편합니다.</p>
+<div class="code"><div class="code-bar"><span class="env env-py">Python 파일</span><span class="fname">src/main.py</span><button class="copy" type="button">복사</button></div><pre><code># main.py — 영상 입력 주제 공통 뼈대
+import argparse
+
+import cv2
+
+from utils import FPSMeter, open_source
+
+
+def process(frame):
+    &quot;&quot;&quot;팀이 구현할 처리 함수. 지금은 그레이스케일 변환만 한다.&quot;&quot;&quot;
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(&quot;--source&quot;, default=&quot;0&quot;, help=&quot;0=웹캠, 또는 동영상 파일 경로&quot;)
+    args = ap.parse_args()
+
+    cap = open_source(args.source)
+    fps = FPSMeter()
+
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            print(&quot;[INFO] 영상이 끝났거나 프레임을 읽지 못했습니다.&quot;)
+            break
+
+        out = process(frame)
+        cv2.putText(out, f&quot;FPS {fps.tick():.1f}&quot;, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        cv2.imshow(&quot;result&quot;, out)
+
+        if cv2.waitKey(1) &amp; 0xFF == ord(&quot;q&quot;):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre></div><div class="code"><div class="code-bar"><span class="env env-conda">Anaconda Prompt</span><button class="copy" type="button">복사</button></div><pre><code>python src\main.py --source 0
+python src\main.py --source data\samples\test.mp4</code></pre></div>
+<h3>설정 파일 예시</h3>
+<p>코드 안에 숫자를 직접 적지 말고 <code>config.json</code>에 모읍니다. 기준값을 바꿀 때 코드를 고칠 필요가 없고, 어떤 값으로 실험했는지 기록도 쉬워집니다.</p>
+<div class="code"><div class="code-bar"><span class="env env-txt">텍스트 파일</span><span class="fname">config.json</span><button class="copy" type="button">복사</button></div><pre><code>{
+  &quot;blur_kernel&quot;: 5,
+  &quot;canny_low&quot;: 50,
+  &quot;canny_high&quot;: 150,
+  &quot;min_area&quot;: 200
+}</code></pre></div><div class="code"><div class="code-bar"><span class="env env-py">Python 파일</span><span class="fname">사용 예</span><button class="copy" type="button">복사</button></div><pre><code>from utils import load_config
+
+cfg = load_config()   # 프로젝트 폴더의 config.json을 읽습니다
+edges = cv2.Canny(gray, cfg[&quot;canny_low&quot;], cfg[&quot;canny_high&quot;])</code></pre></div>
+</section>
+
+<section id="rules"><h2>프로젝트 규칙</h2>
+<h3>폴더 구조 (모든 팀 동일)</h3>
+<div class="code"><div class="code-bar"><span class="env env-txt">텍스트 파일</span><span class="fname">폴더 구조</span><button class="copy" type="button">복사</button></div><pre><code>project_name/
+├── README.md              # 주제, 실행 방법, 스크린샷, 역할 분담
+├── requirements.txt
+├── config.json            # 기준값·커널 크기 등 조정할 값 모음
+├── .gitignore
+├── src/
+│   ├── main.py            # 실행 시작점 (--source 인자)
+│   ├── utils.py           # 공통 코드 (그대로 복사해서 사용)
+│   ├── preprocess.py      # 전처리 함수
+│   └── detect.py          # 검출·판정 함수
+├── data/
+│   ├── samples/           # 입력 데이터 (GitHub에 올리지 않음)
+│   └── SOURCES.md         # 데이터 출처와 라이선스 기록
+├── results/               # 결과 이미지·영상·CSV
+└── docs/
+    ├── 수행계획서.md
+    ├── 실험기록.md        # 파라미터별 결과 비교
+    └── 최종보고서.md</code></pre></div>
+<h3>GitHub에 올리지 않을 것</h3>
+<p>데이터와 결과 영상은 용량이 커서 저장소에 올리지 않습니다. 저장소를 만들자마자 <code>.gitignore</code>부터 넣으세요.</p>
+<div class="code"><div class="code-bar"><span class="env env-txt">텍스트 파일</span><span class="fname">.gitignore</span><button class="copy" type="button">복사</button></div><pre><code># 용량이 큰 데이터와 결과물은 올리지 않습니다
+data/samples/
+results/
+*.mp4
+*.avi
+__pycache__/
+.vscode/</code></pre></div>
+<h3>데이터 규칙</h3>
+<ul>
+<li>공개 라이선스 이미지, 팀이 직접 찍은 사진, 웹캠 영상만 씁니다. 어디서 가져왔는지 <code>data/SOURCES.md</code>에 꼭 적습니다.</li>
+<li>사람이 나오는 영상은 <strong>팀원 본인만</strong> 출연합니다. 다른 사람이 찍히지 않도록 촬영 장소를 고르세요.</li>
+<li>모든 팀은 자기 주제에 맞는 <strong>정답표를 최소 20건</strong> 직접 만듭니다(정답 개수, 정답 종류, 정답 위치 등). 성능을 숫자로 말하려면 비교할 정답이 있어야 합니다.</li>
+</ul>
+<h3>하지 않을 것</h3>
+<ul>
+<li>딥러닝 모델(YOLO, CNN 등)과 <code>cv2.dnn</code> 모듈 사용</li>
+<li>인터넷 예제 코드를 통째로 복사해 제출하기 — 참고했다면 출처를 주석으로 적고, 우리 주제에 맞게 고쳐서 씁니다.</li>
+<li>코드 곳곳에 숫자 직접 적기 — 기준값은 <code>config.json</code>에 모읍니다.</li>
+</ul>
+</section>
+
+<section id="schedule"><h2>5일 진행 일정</h2>
+<p>모든 주제는 아래 흐름을 따릅니다. 주제별 세부 일정은 각 프로젝트 설명에 있습니다.</p>
+<ol class="days wide">
+<li><span class="dn">Day 1</span><span><strong>계획</strong> — 주제 확정, 필수 기능 정리, 데이터 수집, 저장소 만들기<br><small>마감: 수행계획서, 샘플 데이터 30장 이상</small></span></li>
+<li><span class="dn">Day 2</span><span><strong>핵심 구현</strong> — 이미지 한 장(또는 한 프레임)에서 처리 흐름이 끝까지 돌아가게 만들기<br><small>마감: 동작하는 첫 버전</small></span></li>
+<li><span class="dn">Day 3</span><span><strong>확장과 조정</strong> — 전체 데이터에 적용, 기준값 조정, <strong>서로 코드 리뷰</strong><br><small>마감: 실험기록 1차</small></span></li>
+<li><span class="dn">Day 4</span><span><strong>완성도 높이기</strong> — 예외 처리, 화면·로그, 속도 측정, 코드 정리<br><small>마감: 통합 실행 버전</small></span></li>
+<li><span class="dn">Day 5</span><span><strong>마무리</strong> — 최종 테스트, README, 발표 자료, 시연<br><small>마감: 최종 보고서, 시연 영상 1~2분</small></span></li>
+</ol>
+<aside class="call call-tip"><p class="call-t">Day 3 코드 리뷰는 꼭 하세요</p><p>각자 <code>feature/이름</code> 브랜치에서 작업하고, Pull Request를 올려 팀원이 서로 리뷰합니다. 리뷰 댓글 기록도 제출물에 들어갑니다. 교과 1에서 배운 Git을 실제 협업에 써 보는 시간입니다.</p></aside>
+</section>
+<section id="grade"><h2>평가 기준 (100점)</h2><p>교과 14·15 최종 프로젝트와 같은 기준입니다. 지금 이 틀에 익숙해지면 최종 프로젝트 때 무엇을 준비해야 하는지 이미 알고 시작하게 됩니다.</p><div class="tbl"><table class="grid"><thead><tr><th>항목</th><th>배점</th><th>이렇게 봅니다</th></tr></thead><tbody><tr><td>프로젝트 완성도</td><td class="num">30</td><td>필수 기능이 다 되는지, 시연에서 잘 동작하는지</td></tr><tr><td>프로젝트 창의성</td><td class="num">10</td><td>도전 기능, 우리 팀만의 아이디어</td></tr><tr><td>처리 성능</td><td class="num">20</td><td>정답표 대비 정확도, 처리 속도(FPS 또는 장당 ms)</td></tr><tr><td>코드 품질</td><td class="num">10</td><td>함수 나누기, config.json 사용, 커밋 기록</td></tr><tr><td>데이터 품질</td><td class="num">10</td><td>데이터의 다양성, 출처 기록, 정답표 구성</td></tr><tr><td>수행 역량</td><td class="num">20</td><td>일정 지키기, 협업 참여, 발표와 문서</td></tr></tbody></table></div><aside class="call call-concept"><p class="call-t">"한계와 개선 방향"은 감점이 아니라 점수입니다</p><p>규칙으로 풀리지 않은 부분을 숨기지 말고 정확히 적으세요. "어떤 조건에서, 왜, 얼마나 실패했는가"를 근거와 함께 보여 준 팀이 좋은 점수를 받습니다.</p></aside></section>
+<div class="lvband" id="lv1" style="--lv:#2F7D55"><p class="lvband-n">Level 1 ★☆☆☆</p><h2>입문</h2><p>정지 이미지를 한꺼번에 처리합니다. OpenCV 함수를 조합해 실제로 쓸모 있는 도구 하나를 완성하는 것이 목표입니다.</p></div>
+
+<section class="proj" id="p01" style="--lv:#2F7D55">
+  <header class="proj-h">
+    <p class="proj-id">P01</p>
+    <h3>데이터셋 품질 점검 · 썸네일 시트 생성기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 1 ★☆☆☆</span><span>권장 인원 2명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">수백 장의 이미지 폴더를 읽어 흐린 사진, 너무 어둡거나 밝은 사진, 크기가 맞지 않는 사진을 자동으로 골라내고, 전체를 한눈에 보는 썸네일 시트를 만드는 도구입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>앞으로 교과 8과 교과 14에서 1,000장 단위의 데이터셋을 다루게 됩니다. AI 모델 성능이 나오지 않는 원인 중 상당수가 학습 데이터에 섞인 불량 이미지입니다. 그래서 현업 AI 프로젝트는 데이터 품질 점검으로 시작합니다. 여러분이 만든 이 도구를 나중에 실제 데이터셋 점검에 그대로 쓸 수 있습니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>지정한 폴더(하위 폴더 포함)의 <code>jpg · png · bmp</code> 이미지를 모두 읽어 옵니다.</li><li>이미지마다 품질 지표 4가지를 계산합니다 — 해상도, 평균 밝기, 흐림 정도, 파일 용량.</li><li>규칙에 따라 <code>OK / BLUR / DARK / BRIGHT / SIZE_FAIL</code> 다섯 가지로 판정하고, 판정별 폴더로 자동 복사합니다.</li><li>판정 결과를 CSV로 저장하고, 5×5 격자 썸네일 시트(파일명과 판정 표시)를 이미지로 만듭니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>중복되거나 거의 같은 이미지 찾기 (<code>cv2.compareHist</code> 또는 축소 후 픽셀 차이 비교)</li><li>흑백/컬러 자동 구분, 가로·세로 비율 통계</li><li>흐림 기준값을 트랙바로 움직이면 판정 결과가 실시간으로 바뀌는 화면</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>입출력</th><td><code>cv2.imread</code>, <code>cv2.imwrite</code>, <code>cv2.IMREAD_GRAYSCALE</code>, <code>glob.glob(recursive=True)</code>, <code>os.path</code>, <code>shutil.copy</code></td></tr><tr><th>품질 지표</th><td><code>cv2.Laplacian(gray, cv2.CV_64F).var()</code> (흐림), <code>cv2.calcHist</code>, <code>np.mean</code> (밝기)</td></tr><tr><th>시트 만들기</th><td><code>cv2.resize(..., interpolation=cv2.INTER_AREA)</code>, <code>cv2.copyMakeBorder</code>, <code>cv2.hconcat</code>, <code>cv2.vconcat</code>, <code>cv2.putText</code></td></tr><tr><th>기록</th><td><code>csv</code> 모듈 또는 <code>pandas.DataFrame.to_csv</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>공개 이미지 300장 이상과, 팀이 <strong>일부러 만든 불량 이미지 30장</strong>(초점을 흐리게, 어두운 방에서, 역광으로 촬영 등)을 준비합니다. 불량을 직접 만들어 보면 어떤 지표가 무엇을 잡아내는지 몸으로 알게 됩니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>이미지 수집(정상 300장 + 불량 30장), 불량 유형 정의표 작성</span></li><li><span class="dn">Day 2</span><span>이미지 읽기와 지표 계산 함수 구현, 30장으로 지표 분포 확인</span></li><li><span class="dn">Day 3</span><span>정답표 20건과 비교해 기준값 결정, 판정 로직 완성</span></li><li><span class="dn">Day 4</span><span>썸네일 시트·CSV 출력, 300장 전체 처리 시간 측정</span></li><li><span class="dn">Day 5</span><span>README, 정확도 결과 정리, 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>quality_report.csv</code>, <code>contact_sheet_*.jpg</code>, 판정별로 나뉜 출력 폴더, 기준값을 정한 근거가 담긴 <code>실험기록.md</code></p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>Windows에서는 경로에 한글이 있으면 <code>cv2.imread</code>가 <code>None</code>을 돌려줍니다. 공통 코드의 <code>imread_unicode</code>를 쓰거나 폴더 이름을 영문으로 바꾸세요. 읽은 뒤에는 항상 <code>None</code>인지 확인합니다.</li><li>흐림 기준값은 정해진 숫자가 없습니다. 데이터셋마다 다르므로 먼저 전체 값의 분포를 matplotlib 히스토그램으로 그려 보고 정하세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 8·14에서 데이터셋을 만들기 전에 품질 점검 도구로 그대로 다시 씁니다.</p>
+</section>
+
+<section class="proj" id="p02" style="--lv:#2F7D55">
+  <header class="proj-h">
+    <p class="proj-id">P02</p>
+    <h3>조명 얼룩 보정 · 이진화 방법 비교 도구</h3>
+    <p class="proj-meta"><span class="lvtag">Level 1 ★☆☆☆</span><span>권장 인원 2명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">같은 이미지에 고정 임계값, 오츄(Otsu), 적응형 이진화를 동시에 적용해 나란히 비교하고, 어떤 조명에서 어떤 방법이 유리한지 숫자로 증명하는 도구입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 14의 컨베이어 검사 장비는 돔 조명을 쓰지만, 실제 현장에는 조명 얼룩과 그림자가 늘 있습니다. "아침에는 잘 되던 검사기가 오후에는 안 된다"는 문제의 대부분은 이진화 기준값 문제입니다. 이 프로젝트를 하고 나면 조명 조건에 맞는 이진화 방법을 근거를 들어 고를 수 있게 됩니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>원본 / 고정 임계값 / Otsu / 적응형 — 네 화면을 한 창에 동시에 보여 줍니다.</li><li>트랙바로 임계값, 블록 크기, C값을 실시간으로 바꾸고 현재 값을 화면에 표시합니다.</li><li>조명 얼룩 보정 전후를 비교합니다. 모폴로지로 배경 밝기를 추정한 뒤 나눗셈으로 보정합니다.</li><li>직접 만든 정답 마스크 20장과 비교해 방법별 <strong>IoU 점수</strong>를 자동 계산하고 순위를 출력합니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>이진화 뒤 열림·닫힘 연산 조합별 잡음 제거 효과 비교</li><li>조명 조건별 최적 파라미터를 JSON 프리셋으로 저장</li><li>히스토그램 평활화(<code>equalizeHist</code>)와 CLAHE 적용 전후 비교 추가</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>이진화</th><td><code>cv2.threshold</code> (<code>THRESH_BINARY</code>, <code>THRESH_OTSU</code>, <code>THRESH_TRIANGLE</code>), <code>cv2.adaptiveThreshold</code> (<code>ADAPTIVE_THRESH_GAUSSIAN_C</code>)</td></tr><tr><th>조명 보정</th><td>큰 커널의 <code>cv2.morphologyEx(..., cv2.MORPH_CLOSE)</code>로 배경 추정 → <code>cv2.divide</code>, <code>cv2.createCLAHE</code></td></tr><tr><th>전처리</th><td><code>cv2.GaussianBlur</code>, <code>cv2.medianBlur</code></td></tr><tr><th>화면</th><td><code>cv2.namedWindow</code>, <code>cv2.createTrackbar</code>, <code>cv2.getTrackbarPos</code>, <code>cv2.hconcat</code>, <code>cv2.vconcat</code></td></tr><tr><th>평가</th><td>NumPy 논리 연산으로 <code>IoU = (A &amp; B).sum() / (A | B).sum()</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>같은 대상(글씨가 적힌 종이, 동전, 부품 등)을 <strong>조명 4가지로 각 10장씩 직접 촬영</strong>합니다 — 실내등 / 창가 역광 / 스탠드 옆 조명 / 어두운 곳. 정답 마스크 20장은 그림판이나 GIMP로 칠해서 만듭니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>촬영 계획 세우기, 조명 4가지 촬영, 정답 마스크 만들기 시작</span></li><li><span class="dn">Day 2</span><span>이진화 세 가지 동시 출력과 트랙바 구현</span></li><li><span class="dn">Day 3</span><span>조명 보정 로직 추가, 보정 전후 비교</span></li><li><span class="dn">Day 4</span><span>IoU 자동 평가 기능, 조건별 결과표 작성</span></li><li><span class="dn">Day 5</span><span>"조명 조건별 추천 방법" 결론 정리와 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>compare_tool.py</code>, 조건×방법 IoU 결과표(CSV), 비교 이미지 모음, 결론 한 쪽 요약</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li><code>adaptiveThreshold</code>의 <code>blockSize</code>는 3 이상의 홀수여야 합니다. 트랙바 값은 <code>bs = bs * 2 + 3</code>처럼 바꿔서 넘기세요.</li><li>Otsu는 <code>cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)</code>처럼 첫 임계값을 0으로 둡니다. 실제로 쓰인 값은 반환값 첫 번째에 들어 있습니다.</li><li>IoU를 계산하기 전에 두 마스크의 값 범위(0/255인지 0/1인지)와 자료형을 맞추세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9 머신비전의 결함 검출 단계에서 전처리로 그대로 쓰입니다.</p>
+</section>
+
+<section class="proj" id="p03" style="--lv:#2F7D55">
+  <header class="proj-h">
+    <p class="proj-id">P03</p>
+    <h3>색상으로 분류하고 개수 세기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 1 ★☆☆☆</span><span>권장 인원 2~3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">바닥이나 벨트 위에 놓인 여러 색의 물체를 색상별로 나누고, 개수를 세고, 크기를 재는 계수 프로그램입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 14 프로젝트에서는 야채·과일 사진을 출력해 컨베이어 벨트에 올려 촬영합니다. 이 프로젝트는 그 상황을 가장 단순한 규칙으로 푸는 첫 번째 버전입니다. 실제 농산물 선별기의 1세대 기술도 색상 분리였습니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>HSV 색 공간으로 바꾼 뒤 5가지 이상의 색(빨강·노랑·초록·파랑·갈색 등)을 분리합니다.</li><li>색 범위를 트랙바로 직접 찾아 저장하는 <strong>보정 모드</strong>를 만듭니다.</li><li>모폴로지 후처리와 연결 요소 분석으로 개수를 세고, 최소 면적보다 작은 것은 잡음으로 버립니다.</li><li>물체마다 외곽선, 중심점, 번호, 면적을 그리고, 색상별 집계표를 화면에 띄우고 CSV로 저장합니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>면적 기준 대·중·소 등급 나누기와 등급별 통계</li><li>붙어 있는 물체 떼어 내기 (<code>cv2.distanceTransform</code> + <code>cv2.watershed</code>)</li><li>원형도(<code>4π × 면적 ÷ 둘레²</code>)로 둥근 것과 길쭉한 것 구분</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>색 분리</th><td><code>cv2.cvtColor(..., cv2.COLOR_BGR2HSV)</code>, <code>cv2.inRange</code>, <code>cv2.bitwise_or</code>, <code>cv2.bitwise_and</code></td></tr><tr><th>후처리</th><td><code>cv2.getStructuringElement</code>, <code>cv2.morphologyEx(MORPH_OPEN / MORPH_CLOSE)</code></td></tr><tr><th>개수 세기</th><td><code>cv2.connectedComponentsWithStats</code>, <code>cv2.findContours</code>, <code>cv2.contourArea</code>, <code>cv2.boundingRect</code>, <code>cv2.moments</code></td></tr><tr><th>표시</th><td><code>cv2.drawContours</code>, <code>cv2.circle</code>, <code>cv2.rectangle</code>, <code>cv2.putText</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>색이 서로 다른 물체(과일, 블록, 문구류 등)를 놓고 <strong>50장 이상 촬영</strong>합니다. 개수·배치·조명을 바꿔 가며 찍고, 그중 20장은 정답 개수표를 만듭니다. 단색 배경을 쓰면 훨씬 수월합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>촬영 세트 구성, 50장 촬영, 정답표 20장 작성</span></li><li><span class="dn">Day 2</span><span>HSV 보정 모드 구현, 색상별 범위 확정</span></li><li><span class="dn">Day 3</span><span>모폴로지·면적 조건으로 계수 정확도 끌어올리기</span></li><li><span class="dn">Day 4</span><span>표시 화면과 CSV 저장, 정답 대비 오차 측정</span></li><li><span class="dn">Day 5</span><span>실패 사례(겹침·그림자·반사) 분석과 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>color_counter.py</code>, <code>hsv_presets.json</code>, 계수 결과 CSV, 20장 기준 정확도 결과</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>OpenCV의 Hue 값은 0~360이 아니라 <strong>0~179</strong>입니다. 빨강은 0~10과 170~179 두 구간에 걸쳐 있으므로 마스크 두 개를 <code>bitwise_or</code>로 합칩니다.</li><li>그림자까지 잡히면 채도(S) 하한을 올리고, 반사로 생긴 흰 점은 명도(V) 상한으로 뺍니다.</li><li>물체가 겹치면 하나로 세어집니다. 해결하지 못한 한계도 보고서에 정확히 적으세요 — 그것도 평가 대상입니다.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9의 분할(GrabCut, MeanShift) 실습과 교과 14 필수 기능 "검출 대상 분류 정보 표시(5종 이상)"로 이어집니다.</p>
+</section>
+<div class="lvband" id="lv2" style="--lv:#2A67A8"><p class="lvband-n">Level 2 ★★☆☆</p><h2>초중급</h2><p>실시간 영상과 마우스·키보드 입력이 들어옵니다. 프레임 단위로 처리하면서 사용자와 주고받는 프로그램을 만듭니다.</p></div>
+
+<section class="proj" id="p04" style="--lv:#2A67A8">
+  <header class="proj-h">
+    <p class="proj-id">P04</p>
+    <h3>실시간 영상 필터 스튜디오 · FPS 측정기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 2 ★★☆☆</span><span>권장 인원 2명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">웹캠 영상에 여러 필터를 키보드로 바꿔 가며 적용하고, 필터마다 처리 시간(ms)과 FPS를 실제로 재서 비교표를 만드는 도구입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 14의 목표 성능은 20 FPS 이상, 교과 15는 30 FPS 이상입니다. 어떤 연산이 얼마나 느린지 직접 재 본 팀은 최종 프로젝트에서 속도 문제를 빨리 해결합니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>웹캠과 동영상 파일 중 골라서 입력하고, 키보드로 필터 모드를 바꿉니다(최소 8가지).<br>그레이스케일 / 가우시안 블러 / 미디언 블러 / 양방향 필터 / 샤프닝(직접 만든 커널) / Canny 에지 / 히스토그램 평활화 / 모자이크</li><li>화면 왼쪽 위에 현재 모드, 실시간 FPS, 필터 처리 시간(ms)을 항상 표시합니다.</li><li>트랙바로 필터별 주요 파라미터를 실시간으로 조절합니다.</li><li><kbd>s</kbd> 스냅샷 저장, <kbd>r</kbd> 녹화 시작/종료, <kbd>q</kbd> 종료 — 저장 파일명에는 날짜와 시각이 자동으로 붙습니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>화면을 좌우로 나눠 원본과 필터 결과를 나란히 보기</li><li>해상도(640×480 / 1280×720 / 1920×1080)별 FPS 자동 측정 보고서</li><li><code>cv2.filter2D</code>와 NumPy 반복문으로 직접 짠 합성곱의 속도 비교</li><li>단색 배경을 지우고 다른 배경 사진을 합성하는 크로마키</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>영상 입출력</th><td><code>cv2.VideoCapture</code>, <code>cap.set(cv2.CAP_PROP_FRAME_WIDTH, ...)</code>, <code>cv2.VideoWriter</code>, <code>cv2.VideoWriter_fourcc(*'mp4v')</code></td></tr><tr><th>필터</th><td><code>cv2.GaussianBlur</code>, <code>cv2.medianBlur</code>, <code>cv2.bilateralFilter</code>, <code>cv2.filter2D</code>, <code>cv2.Canny</code>, <code>cv2.equalizeHist</code></td></tr><tr><th>성능 측정</th><td><code>time.perf_counter</code>, <code>cv2.getTickCount</code>, <code>cv2.getTickFrequency</code>, 공통 코드의 <code>FPSMeter</code></td></tr><tr><th>입력 처리</th><td><code>cv2.waitKey(1) &amp; 0xFF</code>, <code>cv2.createTrackbar</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>웹캠 실시간 영상과, 미리 녹화한 동영상 3편(움직임 많음 / 적음 / 어두움)을 준비합니다. 녹화본이 있으면 같은 조건으로 몇 번이고 다시 잴 수 있습니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>영상 반복 처리 뼈대, 모드 전환 구조 설계(함수 딕셔너리)</span></li><li><span class="dn">Day 2</span><span>필터 8가지 구현, 트랙바 연결</span></li><li><span class="dn">Day 3</span><span>FPS·처리 시간 측정 기능과 화면 표시</span></li><li><span class="dn">Day 4</span><span>녹화·스냅샷, 해상도별 성능 보고서 자동화</span></li><li><span class="dn">Day 5</span><span>"가장 느린 연산 TOP 3와 그 이유" 분석 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>filter_studio.py</code>, 해상도×필터 FPS 비교표(CSV), 시연 녹화 영상, 성능 분석 요약</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>양방향 필터(<code>bilateralFilter</code>)가 얼마나 느린지 직접 확인해 보세요. 이걸 체감하는 것이 이 프로젝트의 핵심입니다.</li><li>FPS는 한 프레임으로 계산하면 숫자가 요동칩니다. 공통 코드의 <code>FPSMeter</code>처럼 최근 30프레임 평균을 쓰세요.</li><li><code>VideoWriter</code>에 넘긴 크기와 실제 프레임 크기가 다르면 파일이 0바이트로 만들어집니다. 반드시 <code>frame.shape</code>에서 크기를 가져오세요.</li><li>모드 전환을 <code>if/elif</code> 스무 줄로 쓰지 말고 <code>{'1': to_gray, '2': blur, ...}</code> 같은 함수 딕셔너리로 만드세요. 코드 품질 점수와 직결됩니다.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 14·15의 실시간 추론 반복 구조와 FPS 목표 달성 전략으로 이어집니다.</p>
+</section>
+
+<section class="proj" id="p05" style="--lv:#2A67A8">
+  <header class="proj-h">
+    <p class="proj-id">P05</p>
+    <h3>미니 라벨링 툴 — 마우스로 박스 그리기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 2 ★★☆☆</span><span>권장 인원 2~3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">이미지 폴더를 넘기며 마우스로 박스를 그려 라벨을 저장하는 프로그램입니다. 교과 7 「학습데이터 라벨링 모듈」의 핵심 엔진을 OpenCV로 먼저 만들어 봅니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 7에서 Tkinter로 본격적인 라벨링 툴을 만들게 됩니다. 이 프로젝트에서 박스 그리기와 좌표 저장을 미리 완성해 두면 교과 7에서는 화면만 얹으면 됩니다. 라벨 형식은 교과 8에서 받게 될 실제 데이터와 같은 <strong>YOLO 형식</strong>으로 맞춥니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>폴더 안 이미지를 <kbd>d</kbd> / <kbd>a</kbd> 키로 다음·이전으로 넘기고, 진행률(예: 12/100)을 표시합니다.</li><li>마우스를 끄는 동안 박스가 미리 보이고, 손을 떼면 박스가 확정됩니다.</li><li>숫자키 <kbd>1</kbd>~<kbd>6</kbd>로 클래스를 바꾸고, 클래스마다 박스 색을 다르게 표시합니다.<br>클래스 6종: 1 나뭇잎류 / 2 플라스틱·돌·금속류 / 3 나뭇가지류 / 4 고무장갑 / 5 병해·갈변 / 6 파·고추</li><li>YOLO 형식 <code>.txt</code>(<code>class cx cy w h</code>, 모두 0~1 비율)로 저장합니다. 이미지를 넘길 때 자동 저장되고, 기존 라벨 파일이 있으면 불러옵니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li><kbd>z</kbd> 실행 취소, 박스 선택 후 <kbd>Delete</kbd>로 삭제</li><li>박스를 클릭해 선택하고 모서리를 끌어 크기 수정</li><li>큰 이미지는 축소해서 보여 주되, <strong>저장은 원본 좌표 기준</strong>으로 되돌려 저장 (4848×2704 같은 대형 이미지 대비)</li><li>라벨 통계 화면(클래스별 개수, 라벨이 없는 이미지 목록)</li><li>마우스 휠 확대·축소와 화면 이동</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>마우스</th><td><code>cv2.setMouseCallback</code>, <code>cv2.EVENT_LBUTTONDOWN</code>, <code>cv2.EVENT_MOUSEMOVE</code>, <code>cv2.EVENT_LBUTTONUP</code>, <code>cv2.EVENT_MOUSEWHEEL</code></td></tr><tr><th>그리기</th><td><code>cv2.rectangle</code>, <code>cv2.putText</code>, <code>img.copy()</code>로 미리보기 화면 따로 그리기</td></tr><tr><th>좌표 변환</th><td>표시 배율 적용·역적용, 픽셀 좌표 ↔ 0~1 비율 좌표</td></tr><tr><th>파일</th><td><code>os.listdir</code>, <code>os.path.splitext</code>, 텍스트 파일 읽기·쓰기</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>여러 물체가 함께 찍힌 공개 이미지 100장 이상을 준비합니다(식품·부품 장면이면 더 좋습니다). 그중 20장은 <strong>팀원이 각자 따로 라벨링</strong>해서 서로 얼마나 일치하는지 비교합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>요구사항 정리, LabelImg를 직접 써 보며 좋은 점·불편한 점 기록</span></li><li><span class="dn">Day 2</span><span>마우스로 박스 그리기와 화면 표시 구조 완성</span></li><li><span class="dn">Day 3</span><span>클래스 전환, 저장·불러오기, 이미지 넘기기, YOLO 형식 검증</span></li><li><span class="dn">Day 4</span><span>좌표 역변환·실행 취소·통계, 100장 실제 라벨링</span></li><li><span class="dn">Day 5</span><span>팀원 간 라벨 일치도(IoU) 측정, 개선점 정리, 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>mini_labeler.py</code>, 라벨링 완료 데이터셋(이미지 100장 + txt), 라벨 일치도 분석표, LabelImg와의 비교표</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>마우스 상태(그리는 중인지, 시작점이 어디인지)를 전역 변수 여러 개로 흩어 두면 금방 꼬입니다. 클래스 하나나 딕셔너리 하나에 모으세요.</li><li>오른쪽에서 왼쪽으로 끌면 너비·높이가 음수가 됩니다. <code>min</code>, <code>max</code>로 좌표를 정리하세요.</li><li>YOLO 좌표는 <strong>중심점 기준</strong>입니다. <code>cx = (x1 + x2) / 2 / W</code>, <code>w = abs(x2 - x1) / W</code></li><li>축소해서 보여 준 이미지 좌표를 그대로 저장하는 실수가 현업에서도 가장 흔합니다. 저장 직전에 배율로 나눴는지 꼭 확인하세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 7 라벨링 툴 제작의 직접 준비 단계이며, 교과 8 데이터셋 구축에 실제로 쓰입니다.</p>
+</section>
+
+<section class="proj" id="p06" style="--lv:#2A67A8">
+  <header class="proj-h">
+    <p class="proj-id">P06</p>
+    <h3>문서·라벨 자동 평면화 스캐너</h3>
+    <p class="proj-meta"><span class="lvtag">Level 2 ★★☆☆</span><span>권장 인원 2명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">비스듬히 찍힌 문서나 제품 라벨을 자동으로 찾아 정면에서 찍은 것처럼 펴 주는 스캐너입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>제품 라벨, 바코드, 계기판 화면은 정면에서 찍히지 않는 경우가 대부분입니다. 검사나 판독 전에 이미지를 정면으로 펴는 작업은 머신비전의 기본 전처리이고, 카메라 좌표 변환을 이해하는 첫걸음입니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>입력 이미지에서 가장 큰 사각형 영역을 자동으로 찾습니다(에지 → 외곽선 → 사각형 근사).</li><li>꼭짓점 4개를 <strong>왼쪽 위 → 오른쪽 위 → 오른쪽 아래 → 왼쪽 아래</strong> 순서로 정렬합니다.</li><li>투영 변환으로 정면 이미지를 만들고, 출력 크기는 원래 변 길이로 계산합니다.</li><li>결과를 컬러 / 흑백(적응형 이진화) / 선명하게(샤프닝) 세 가지 모드로 바꿔 보고 저장합니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>자동 검출에 실패하면 마우스로 네 점을 직접 찍는 수동 모드</li><li>웹캠 실시간 스캔 — 사각형이 몇 프레임 연속 안정적으로 잡히면 자동 촬영</li><li>여러 장 스캔 결과를 한 파일로 묶어 저장</li><li>CLAHE로 밝기를 고르게 한 뒤 글씨 가독성 비교</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>검출</th><td><code>cv2.Canny</code>, <code>cv2.findContours(RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)</code>, <code>cv2.arcLength</code>, <code>cv2.approxPolyDP</code>, <code>cv2.contourArea</code></td></tr><tr><th>변환</th><td><code>cv2.getPerspectiveTransform</code>, <code>cv2.warpPerspective</code>, (선택) <code>cv2.getRotationMatrix2D</code>, <code>cv2.warpAffine</code></td></tr><tr><th>후처리</th><td><code>cv2.adaptiveThreshold</code>, <code>cv2.filter2D</code>(샤프닝 커널), <code>cv2.createCLAHE</code></td></tr><tr><th>보조</th><td><code>cv2.GaussianBlur</code>, <code>cv2.dilate</code>(끊긴 에지 잇기), NumPy <code>argmin</code> / <code>argmax</code>로 꼭짓점 정렬</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>문서, 책 표지, 제품 라벨, 영수증 등을 <strong>각도·배경·조명을 바꿔 가며 60장 촬영</strong>합니다(각도 3단계 × 배경 2종 × 대상 10종). 20장은 정면화 성공 여부 정답표를 만듭니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>촬영과 "성공"의 기준 정의</span></li><li><span class="dn">Day 2</span><span>에지 → 외곽선 → 사각형 근사 흐름 구현</span></li><li><span class="dn">Day 3</span><span>꼭짓점 정렬과 투영 변환 완성, 출력 크기 계산</span></li><li><span class="dn">Day 4</span><span>후처리 모드·수동 모드·실시간 모드, 60장 일괄 검증</span></li><li><span class="dn">Day 5</span><span>실패 사례 원인 분석(배경 대비 부족, 모서리 가림 등)과 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>doc_scanner.py</code>, 스캔 전후 비교 이미지, 성공률 결과, 실패 원인 분류표</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li><code>approxPolyDP</code>의 epsilon은 <code>0.02 * cv2.arcLength(cnt, True)</code>로 시작해 보고, 꼭짓점이 4개가 안 나오면 0.01~0.05 사이에서 바꿔 보세요.</li><li>꼭짓점 정렬은 간단한 규칙이 있습니다. x+y가 가장 작은 점이 왼쪽 위, 가장 큰 점이 오른쪽 아래, y−x가 가장 작은 점이 오른쪽 위, 가장 큰 점이 왼쪽 아래입니다.</li><li>배경과 문서의 밝기 차이가 작으면 검출이 실패합니다. 촬영 환경을 알맞게 만드는 것도 비전 엔지니어의 일입니다.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9의 특징 매칭·정렬, 교과 14에서 카메라 각도와 조명을 설계하는 감각으로 이어집니다.</p>
+</section>
+<div class="lvband" id="lv3" style="--lv:#A86A12"><p class="lvband-n">Level 3 ★★★☆</p><h2>중상급</h2><p>특징점, 정합, 추적을 다룹니다. 함수 하나로는 결과가 나오지 않으므로 여러 단계를 잇는 처리 흐름을 직접 설계해야 합니다.</p></div>
+
+<section class="proj" id="p07" style="--lv:#A86A12">
+  <header class="proj-h">
+    <p class="proj-id">P07</p>
+    <h3>기준 영상 비교 결함 검사기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 3 ★★★☆</span><span>권장 인원 3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">정상 제품 사진(기준 샘플)과 검사할 제품 사진을 자동으로 겹쳐 맞춘 뒤, 두 영상의 차이를 구해 얼룩·긁힘·누락을 찾아내는 검사기입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>인쇄물, 포장재, 기판 검사에서 실제로 가장 많이 쓰는 방식입니다. 교과 14에서 딥러닝으로 풀게 될 문제를 규칙 기반으로 먼저 풀어 보는 것이라, 나중에 두 방식을 비교하는 기준이 됩니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>정상 기준 이미지를 등록하고, 검사 이미지를 특징점 매칭으로 기준에 <strong>자동 정렬</strong>합니다.</li><li>정렬 후 차영상 → 이진화 → 모폴로지로 잡음을 없앱니다.</li><li>결함 영역의 위치·면적·외접 사각형을 구하고, 규칙으로 유형을 나눕니다(최소 3종: 얼룩 / 긁힘 / 누락).</li><li>허용 면적·개수 기준으로 <strong>OK / NG</strong>를 판정하고, 판정 로그 CSV와 결과 이미지를 저장합니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>템플릿 매칭(<code>matchTemplate</code>) 방식과 특징점 정렬 방식의 정확도·속도 비교</li><li>여러 크기로 템플릿 매칭해 크기 변화에 대응</li><li>마우스로 검사 제외 영역(다각형) 지정</li><li>결함 심각도 등급과 일자별 NG율 그래프(matplotlib)</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>정렬</th><td><code>cv2.ORB_create</code>, <code>cv2.SIFT_create</code>, <code>cv2.BFMatcher</code>, 비율 검사(ratio test), <code>cv2.findHomography(..., cv2.RANSAC)</code>, <code>cv2.warpPerspective</code>, (대안) <code>cv2.findTransformECC</code></td></tr><tr><th>차영상</th><td><code>cv2.absdiff</code>, <code>cv2.threshold</code>, <code>cv2.morphologyEx(MORPH_OPEN)</code></td></tr><tr><th>결함 분석</th><td><code>cv2.connectedComponentsWithStats</code>, <code>cv2.contourArea</code>, <code>cv2.minAreaRect</code>, 종횡비·원형도</td></tr><tr><th>템플릿</th><td><code>cv2.matchTemplate(TM_CCOEFF_NORMED)</code>, <code>cv2.minMaxLoc</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>반복 인쇄물(명함, 포장지, 라벨지 등)을 <strong>정상 20장 + 결함 40장</strong> 촬영합니다. 결함은 직접 만듭니다 — 펜 자국, 스티커 붙이기, 일부 가리기, 구기기. 결함 위치·유형 정답표 20건을 작성합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>카메라를 고정할 거치대 만들기, 정상·결함 촬영, 결함 유형 정의</span></li><li><span class="dn">Day 2</span><span>특징점 매칭으로 정렬 구현, 정렬 오차(픽셀) 측정</span></li><li><span class="dn">Day 3</span><span>차영상·결함 검출·규칙 분류 구현</span></li><li><span class="dn">Day 4</span><span>OK/NG 기준값 조정, <strong>놓친 불량 vs 잘못 잡은 정상</strong>의 균형 실험</span></li><li><span class="dn">Day 5</span><span>혼동 행렬 작성, 한계 분석, 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>inspector.py</code>, <code>config.json</code>(판정 기준), 판정 로그 CSV, 혼동 행렬과 정확도·정밀도·재현율 결과</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>정렬이 1~2픽셀만 어긋나도 모든 경계선이 결함으로 잡힙니다. 차영상 전에 약한 블러를 주고, 경계선 부분을 마스크로 빼는 방법을 시도해 보세요.</li><li>ORB는 빠르지만 정렬 정확도가 떨어지고, SIFT는 정확하지만 느립니다. 둘 다 돌려서 비교하는 것 자체가 좋은 결과물입니다.</li><li>매칭된 점이 4개보다 적으면 <code>findHomography</code>가 실패합니다. 이 경우를 반드시 예외 처리하세요.</li><li>정밀도·재현율은 교과 4에서 정식으로 배웁니다. 여기서는 "놓친 불량"과 "괜히 잡은 정상"이라는 현장 말로 먼저 익혀 두세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9 머신비전 전 범위, 그리고 교과 14에서 딥러닝 검출과 비교할 규칙 기반 기준이 됩니다.</p>
+</section>
+
+<section class="proj" id="p08" style="--lv:#A86A12">
+  <header class="proj-h">
+    <p class="proj-id">P08</p>
+    <h3>특징점 매칭 파노라마 · 물체 찾기</h3>
+    <p class="proj-meta"><span class="lvtag">Level 3 ★★★☆</span><span>권장 인원 2~3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">여러 장의 사진을 특징점으로 이어 붙여 파노라마를 만들고, 같은 기술로 장면 속에서 특정 물체의 위치를 찾아내는 두 가지 기능을 만듭니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>넓은 검사 영역을 여러 카메라로 나눠 찍고 합치는 작업, 기준 물체를 장면에서 찾아내는 작업은 물류와 설비 점검에서 실제로 쓰입니다. 여기서 다루는 호모그래피(평면 좌표 변환)는 교과 10 자세 추정의 좌표 변환 개념과도 이어집니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>이미지 두 장 이상에서 특징점을 찾아 매칭하고, 매칭선을 그린 이미지를 출력합니다.</li><li>비율 검사와 RANSAC으로 잘못된 매칭을 걸러 내고, <strong>걸러 내기 전후 매칭 수</strong>를 출력합니다.</li><li>호모그래피로 이미지를 변형·합성해 파노라마를 만듭니다(3장 이상 연속 이어 붙이기).</li><li>물체 찾기 모드: 기준 물체 사진 한 장을 주면 장면 사진에서 그 물체의 외곽 사각형을 찾아 그립니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>이음새를 부드럽게 만드는 블렌딩(선형 페더링 또는 <code>cv2.seamlessClone</code>) 전후 비교</li><li>검출기 3종(ORB / SIFT / AKAZE)의 매칭 정확도·속도 비교표</li><li><code>cv2.Stitcher_create()</code> 내장 기능과 직접 만든 결과 비교</li><li>회전·크기·조명을 바꿔 촬영한 물체로 얼마나 잘 찾는지 시험</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>특징점</th><td><code>cv2.ORB_create</code>, <code>cv2.SIFT_create</code>, <code>cv2.AKAZE_create</code>, <code>detectAndCompute</code></td></tr><tr><th>매칭</th><td><code>cv2.BFMatcher(cv2.NORM_HAMMING / cv2.NORM_L2)</code>, <code>knnMatch</code> + 비율 검사, <code>cv2.FlannBasedMatcher</code></td></tr><tr><th>기하 변환</th><td><code>cv2.findHomography(RANSAC)</code>, <code>cv2.perspectiveTransform</code>, <code>cv2.warpPerspective</code></td></tr><tr><th>표시·합성</th><td><code>cv2.drawMatches</code>, <code>cv2.polylines</code>, NumPy 마스크로 알파 블렌딩</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>좌우로 30~40% 겹치게 찍은 <strong>연속 사진 5세트(세트당 3~5장)</strong>, 물체 찾기용 기준 물체 5종과 그 물체가 들어간 장면 사진 30장을 준비합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>촬영 요령 익히기(제자리에서 몸만 돌리기, 겹침 비율), 세트 촬영</span></li><li><span class="dn">Day 2</span><span>특징점 검출·매칭·비율 검사 구현, 매칭 품질 눈으로 확인</span></li><li><span class="dn">Day 3</span><span>호모그래피로 두 장 합치기 성공 → 세 장 이상으로 확장</span></li><li><span class="dn">Day 4</span><span>블렌딩 개선, 물체 찾기 모드 구현</span></li><li><span class="dn">Day 5</span><span>검출기 비교 결과 정리와 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>stitcher.py</code>, <code>object_finder.py</code>, 파노라마 결과 5종, 검출기 비교표, 실패 사례 분석</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>ORB는 <code>NORM_HAMMING</code>, SIFT는 <code>NORM_L2</code>를 써야 합니다. 거리 계산 방식을 잘못 고르는 것이 가장 흔한 실수입니다.</li><li>겹침이 20%보다 적으면 거의 실패합니다. 촬영이 알고리즘만큼 중요하다는 것을 확인해 보세요.</li><li>세 장 이상을 이을 때 변환 행렬을 계속 곱해 나가면 오차가 쌓입니다. 가운데 사진을 기준으로 양쪽을 붙이는 방법을 써 보세요.</li><li>결과 캔버스 크기를 미리 계산하지 않으면 이미지가 잘립니다. 네 모서리를 <code>perspectiveTransform</code>으로 변환해 경계를 구하세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9 특징 매칭(SIFT/ORB)의 심화이며, 교과 10의 좌표계 변환 개념으로 이어집니다.</p>
+</section>
+
+<section class="proj" id="p09" style="--lv:#A86A12">
+  <header class="proj-h">
+    <p class="proj-id">P09</p>
+    <h3>통과 개수 세기 — 배경 차분과 객체 추적</h3>
+    <p class="proj-meta"><span class="lvtag">Level 3 ★★★☆</span><span>권장 인원 3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">영상에서 움직이는 대상을 배경 차분으로 분리하고, 프레임이 바뀌어도 같은 대상으로 추적해서, 가상의 선을 지나간 횟수를 방향별로 세는 프로그램입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>컨베이어 생산량 세기, 출입 인원 세기, 위험 구역 진입 감시가 모두 같은 구조입니다. 교과 15의 동작 인식으로 가기 전에 <strong>시간의 흐름을 다루는 비전</strong>을 처음 경험하는 프로젝트입니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>배경 차분으로 움직이는 부분의 마스크를 만들고, 그림자를 지우고, 모폴로지로 정리합니다.</li><li>면적·종횡비 조건으로 쓸 만한 대상만 남기고 중심점을 구합니다.</li><li><strong>간단한 추적기를 직접 구현</strong>합니다. 이전 프레임 대상과 거리가 가장 가까운 것을 같은 대상으로 보고 ID를 이어 붙이며, 몇 프레임 동안 안 보이면 ID를 지웁니다.</li><li>가상 선을 지나갔는지(들어옴/나감 방향 구분) 판정하고, 한 대상을 두 번 세지 않게 막습니다. 실시간 카운터를 띄우고 시간대별 통계를 CSV로 저장합니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>마우스로 세는 선과 관심 영역(다각형)을 직접 지정</li><li>OpenCV 내장 추적기(<code>cv2.legacy.TrackerCSRT_create</code>)와 직접 만든 추적기의 정확도·속도 비교</li><li>크기·속도로 대상 종류 나누기(사람 / 작은 물체)</li><li>영역 안에 머문 시간 측정과 오래 머물 때 경고</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>배경 차분</th><td><code>cv2.createBackgroundSubtractorMOG2(detectShadows=True)</code>, <code>cv2.createBackgroundSubtractorKNN</code>, 프레임 차이(<code>cv2.absdiff</code>)</td></tr><tr><th>후처리</th><td><code>cv2.threshold</code>(그림자 값 127 제거), <code>cv2.morphologyEx(OPEN / CLOSE)</code>, <code>cv2.dilate</code></td></tr><tr><th>대상 추출</th><td><code>cv2.findContours</code>, <code>cv2.boundingRect</code>, <code>cv2.contourArea</code>, <code>cv2.moments</code></td></tr><tr><th>추적</th><td>직접 구현(중심점 사이 거리 + 최대 이동 거리 기준), <code>collections.OrderedDict</code></td></tr><tr><th>판정</th><td>선의 방정식 부호 변화로 통과 판정, <code>cv2.line</code>, <code>cv2.putText</code></td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>팀이 직접 찍은 영상 6편 이상 — ① 책상 위로 물체를 천천히 밀기 ② 빠르게 밀기 ③ 두 개 동시에 밀기 ④ 사람이 문 앞 지나가기 ⑤ 중간에 조명 바뀜 ⑥ 멈췄다 다시 움직이기. 영상마다 <strong>정답 통과 횟수</strong>를 기록합니다. 사람이 나오는 영상에는 팀원 본인만 출연합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>상황별 영상 촬영, 정답 횟수표 작성</span></li><li><span class="dn">Day 2</span><span>배경 차분과 대상 추출을 안정적으로 만들기</span></li><li><span class="dn">Day 3</span><span>중심점 추적기 구현, ID가 잘 유지되는지 확인</span></li><li><span class="dn">Day 4</span><span>선 통과·방향 판정, 중복 방지, 통계 출력</span></li><li><span class="dn">Day 5</span><span>상황별 정확도(오차) 측정, 실패 원인 분석, 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>counter.py</code>, 상황별 정확도표, 카운터가 표시된 결과 영상, 추적기 비교 실험 기록</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>MOG2는 처음 수십 프레임 동안 배경을 학습합니다. 첫 30프레임 결과는 버리세요.</li><li><code>detectShadows=True</code>이면 그림자는 값 <strong>127</strong>로 나옵니다. <code>cv2.threshold(fg, 200, 255, cv2.THRESH_BINARY)</code>로 지울 수 있습니다.</li><li>대상이 한참 멈춰 있으면 배경으로 흡수됩니다(<code>learningRate</code>로 조절). 이 한계는 보고서에 꼭 적으세요.</li><li>선 위에 있는지를 볼 게 아니라, <strong>이전 프레임과 현재 프레임에서 선을 기준으로 한 부호가 바뀌었는지</strong>로 판정해야 정확합니다.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 10의 객체 추적 기법, 교과 15 위험 구역 침입 감지 로직의 원형이 됩니다.</p>
+</section>
+<div class="lvband" id="lv4" style="--lv:#A8342A"><p class="lvband-n">Level 4 ★★★★</p><h2>고급</h2><p>여러 기술을 묶어 판정하고 기록하는 시스템을 만듭니다. 처리 속도, 예외 처리, 로그가 평가의 중심입니다.</p></div>
+
+<section class="proj" id="p10" style="--lv:#A8342A">
+  <header class="proj-h">
+    <p class="proj-id">P10</p>
+    <h3>컨베이어 이물 검출 시스템 시제품</h3>
+    <p class="proj-meta"><span class="lvtag">Level 4 ★★★★</span><span>권장 인원 3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">교과 14 최종 프로젝트 「조각김치 이물검출 시스템」을 딥러닝 없이 규칙 기반만으로 줄여서 먼저 만들어 보는 시제품입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 14의 필수 기능 네 가지 — ① 촬영 영상 표시 ② 이물·불량 검출 ③ 분류 정보 표시(5종 이상) ④ 검출·통계 정보 표시 — 를 그대로 목표로 삼되 규칙 기반으로 해냅니다. 이 프로젝트를 한 팀은 교과 14에 들어갈 때 어떤 부분이 진짜 어려운지 이미 알고 시작합니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li><strong>영상 입력과 표시</strong> — 카메라 또는 영상 파일, 실시간 처리, FPS 표시</li><li><strong>벨트 배경 분리</strong> — 벨트 색·밝기로 관심 영역을 좁히고 정상 산물 영역을 추출</li><li><strong>이물 검출</strong> — 색이 다르거나 모양이 다른 것을 함께 따지는 복합 규칙, 5종 이상 분류 라벨 출력 (예: 잎사귀류 / 플라스틱류 / 가지류 / 변색 / 기타 이물)</li><li><strong>OK/NG 판정과 현황판</strong> — 종류별 누적 개수, NG율, 최근 검출 썸네일, 로그 CSV 저장</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>이물마다 특징값(면적·종횡비·원형도·Hu 모멘트·평균 HSV)을 모아 규칙표로 자동 분류</li><li>검출 순간의 프레임 자동 저장과 화면·소리 경고</li><li>조명 조건별 파라미터 프리셋 저장·불러오기</li><li>시인성 개선 모드 — 대비 강조와 의사 색상(<code>cv2.applyColorMap</code>)으로 사람이 눈으로 검사하는 것을 돕기</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>전처리</th><td><code>cv2.cvtColor</code>, <code>cv2.createCLAHE</code>, <code>cv2.GaussianBlur</code>, 조명 보정(모폴로지 배경 추정 + <code>cv2.divide</code>)</td></tr><tr><th>분할</th><td><code>cv2.inRange</code>, <code>cv2.threshold(OTSU)</code>, <code>cv2.morphologyEx</code>, (선택) <code>cv2.grabCut</code></td></tr><tr><th>특징</th><td><code>cv2.findContours</code>, <code>cv2.contourArea</code>, <code>cv2.arcLength</code>, <code>cv2.minAreaRect</code>, <code>cv2.HuMoments</code>, <code>cv2.mean(img, mask=...)</code></td></tr><tr><th>판정·표시</th><td>규칙 기반 분류 함수, <code>cv2.rectangle</code>, <code>cv2.putText</code>, 현황판 영역 합성(<code>cv2.hconcat</code>)</td></tr><tr><th>기록</th><td>CSV 누적 기록, <code>datetime</code> 시각 기록</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>흰 종이나 천을 벨트 대신 깔고, <strong>주 산물(잘게 썬 채소 사진 출력물 또는 실제 채소) 위에 이물 5종을 올려</strong> 촬영합니다. 정지 사진 100장과, 손으로 천천히 밀면서 찍은 영상 5편을 준비합니다. 정답표(이물 종류·개수) 30건을 작성합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>촬영 세트 구성(조명 고정), 이물 5종 정의, 정답표 설계</span></li><li><span class="dn">Day 2</span><span>조명 보정과 벨트·산물 분리 흐름 구현</span></li><li><span class="dn">Day 3</span><span>이물 후보 검출, 특징값 계산, 규칙 분류 초안</span></li><li><span class="dn">Day 4</span><span>현황판·로그·실시간 처리 통합, 기준값 조정</span></li><li><span class="dn">Day 5</span><span>혼동 행렬 작성, <strong>규칙 기반의 한계 보고서</strong> 작성, 시연</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>inspector_system.py</code>(모듈 분리 필수), <code>config.json</code>, 검출 로그 CSV, 혼동 행렬, 시연 영상, 한계 보고서</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>이 프로젝트의 목표는 높은 정확도가 아니라 <strong>한계를 숫자로 보여 주는 것</strong>입니다. "색이 비슷한 이물은 구분하지 못한다", "겹치면 실패한다" 같은 결론을 근거와 함께 내면 성공입니다. 교과 8에서 딥러닝을 배우는 이유가 바로 여기에 있습니다.</li><li>규칙 분류를 <code>if</code>문 여러 겹으로 쓰지 말고, 특징값 딕셔너리 + 규칙표(JSON)로 만드세요. 교과 14에서 그대로 확장할 수 있습니다.</li><li>현황판을 매 프레임 다시 그리면 FPS가 크게 떨어집니다. 통계는 10프레임마다 한 번만 갱신하는 식으로 주기를 나누세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 9 전 범위를 거쳐 교과 14 프로젝트의 직접 전신이 됩니다. 이 팀의 <code>config.json</code>과 모듈 구조는 교과 14에서 다시 쓸 수 있습니다.</p>
+</section>
+
+<section class="proj" id="p11" style="--lv:#A8342A">
+  <header class="proj-h">
+    <p class="proj-id">P11</p>
+    <h3>작업장 안전 감시 — 구역 침입 감지와 자동 녹화</h3>
+    <p class="proj-meta"><span class="lvtag">Level 4 ★★★★</span><span>권장 인원 3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">지정한 위험 구역에 사람이나 물체가 들어오면 경고를 띄우고, 사건이 일어나기 전후 구간을 잘라 영상으로 자동 저장하는 감시 시스템입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>산업안전 CCTV 분석의 기본 기능입니다. 교과 15 「산업현장 수신호 자세체험 솔루션」의 실시간 알림 부분을 자세 추정 없이 움직임만으로 먼저 구현해 봅니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>마우스로 <strong>위험 구역을 다각형으로 지정</strong>하고 JSON으로 저장·불러오기</li><li>움직임을 검출하고 구역 안인지 판정하되, <strong>N프레임 이상 계속될 때만</strong> 침입으로 확정해 오경보를 줄입니다.</li><li>상태 전환을 명확히 관리합니다 — <code>대기 → 감지 중 → 경보 → 해제</code>. 화면에 현재 상태를 표시하고, 경보 때는 화면 테두리를 빨갛게 하고 경고 문구를 띄웁니다.</li><li><strong>사건 영상 자동 저장</strong> — 발생 시점 기준 이전 3초 + 이후 5초를 저장하고, 사건 기록(시각·지속 시간·구역 이름)을 CSV로 남깁니다.</li></ol>
+  <h4>도전 기능 (창의성 가산점)</h4>
+  <ul class="extra"><li>광학 흐름으로 이동 방향·속도를 구해 "빠르게 접근 중" 단계 경고</li><li>주의 구역 / 금지 구역을 여러 개 두고 단계별로 다르게 경고</li><li>하루 동안 어디에서 침입이 잦았는지 보여 주는 히트맵 이미지</li><li>어두운 환경 대응(CLAHE, 감마 보정)과 야간 모드</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>구역</th><td><code>cv2.setMouseCallback</code>, <code>cv2.fillPoly</code>, <code>cv2.polylines</code>, <code>cv2.pointPolygonTest</code></td></tr><tr><th>움직임</th><td><code>cv2.createBackgroundSubtractorMOG2</code>, <code>cv2.absdiff</code>, <code>cv2.calcOpticalFlowFarneback</code></td></tr><tr><th>버퍼</th><td><code>collections.deque(maxlen=fps*3)</code>로 이전 프레임을 계속 보관</td></tr><tr><th>상태 관리</th><td><code>enum.Enum</code>으로 상태 정의, 상태 전환 함수 하나로 관리</td></tr><tr><th>저장·표시</th><td><code>cv2.VideoWriter</code>, <code>datetime</code> 파일명, CSV 기록, <code>cv2.addWeighted</code>(반투명 구역 표시)</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>팀원이 직접 연기한 상황 영상 8편 — 정상 통행 / 구역 침입 / 스쳐 지나감(오경보 유발) / 물체만 던져 넣기 / 조명 변화 / 여러 명 동시 / 오래 머물기 / 어두운 환경. 영상마다 <strong>정답 사건 시각</strong>을 기록합니다. 출연은 팀원 본인만 합니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>상황 영상 8편 촬영과 정답 사건표, 구역 지정 화면 설계</span></li><li><span class="dn">Day 2</span><span>구역 지정 기능과 구역 안 판정 구현</span></li><li><span class="dn">Day 3</span><span>움직임 검출, 상태 전환, 오경보 줄이기</span></li><li><span class="dn">Day 4</span><span>순환 버퍼로 사건 영상 저장, 기록, 경고 화면</span></li><li><span class="dn">Day 5</span><span>오경보율·미검출률 측정, 기준값 조정 결과 정리, 시연</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>safety_monitor.py</code>, <code>zones.json</code>, 사건 영상 폴더, 사건 기록 CSV, 오경보율 결과</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li>"3초 전부터 저장"은 <code>deque</code>에 프레임을 계속 담아 두었다가 사건이 생기면 한꺼번에 쓰는 구조로만 가능합니다. 이 구조를 스스로 떠올려 보는 것이 이 프로젝트의 핵심입니다.</li><li>메모리를 조심하세요. 1920×1080 프레임 90장이면 약 560MB입니다. 버퍼에는 줄인 해상도로 담으세요.</li><li>오경보를 0으로 만들면 놓치는 경우가 늘어납니다. 안전 관점에서 어느 쪽이 더 위험한지 팀이 판단하고, 그 근거를 보고서에 쓰세요.</li><li>상태를 참/거짓 변수 여러 개로 관리하면 꼭 버그가 생깁니다. <code>Enum</code>으로 상태를 정의하고 전환 규칙을 한곳에 모으세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 15의 위험 상황 실시간 알림 시스템의 직접 전신이며, 교과 10의 시계열·추적 개념으로 이어집니다.</p>
+</section>
+
+<section class="proj" id="p12" style="--lv:#A8342A">
+  <header class="proj-h">
+    <p class="proj-id">P12</p>
+    <h3>실시간 처리 속도 최적화 — 멀티스레드와 성능 측정</h3>
+    <p class="proj-meta"><span class="lvtag">Level 4 ★★★★</span><span>권장 인원 2~3명</span><span>기간 5일</span></p>
+  </header>
+  <p class="lead">같은 영상 처리 흐름을 단순 반복 → 멀티스레드 → 최적화 버전으로 단계별로 개선하면서, FPS가 얼마나 달라지는지 숫자로 증명하는 엔지니어링 프로젝트입니다.</p>
+  <h4>왜 이 프로젝트인가요?</h4>
+  <p>교과 14는 Jetson Orin Nano Super에서 20 FPS 이상, 교과 15는 PC에서 30 FPS 이상이 목표입니다. 모델을 바꾸지 않아도 <strong>처리 구조만 바꿔서 속도가 2~3배 달라질 수 있다</strong>는 것을 직접 재서 확인합니다. 최종 프로젝트에서 속도가 부족할 때 가장 먼저 손대야 할 곳입니다.</p>
+  <h4>필수 기능</h4>
+  <ol class="must"><li>공통 처리 흐름 정의 — 전처리(크기 줄이기·블러) → 검출(에지 또는 색 분리) → 후처리(모폴로지·외곽선) → 결과 그리기</li><li><strong>세 가지 버전 구현</strong> — ① 단순 반복 ② 읽기·처리 스레드 분리(큐 사용) ③ 최적화 적용</li><li><strong>단계별 시간 측정</strong> — 단계마다 걸린 시간(ms)을 따로 재고, 가장 느린 단계를 화면에 표시</li><li>해상도 3종 × 버전 3종 FPS 비교표와 그래프(matplotlib)를 자동으로 만들어 저장</li></ol>
+  <h4>도전 기능 (최적화 기법 — 최소 4가지 이상 실험)</h4>
+  <ul class="extra"><li>처리는 작은 해상도로 하고 결과 좌표만 원래 크기로 되돌리기</li><li>관심 영역(ROI)만 처리하기</li><li>NumPy 반복문을 벡터 연산으로 바꾸기</li><li>무거운 연산은 N프레임마다 한 번만 하고 나머지는 결과 재사용</li><li><code>cv2.UMat</code>(OpenCL 가속) 적용 전후 비교</li><li><code>cv2.setNumThreads</code> 값에 따른 변화 측정</li><li>큐 크기를 제한하고 오래된 프레임은 버려서 지연이 쌓이지 않게 하기</li></ul>
+  <h4>사용할 기술</h4>
+  <div class="tbl"><table class="tech"><tbody><tr><th>동시 처리</th><td><code>threading.Thread</code>, <code>queue.Queue(maxsize=N)</code>, <code>threading.Event</code>(안전한 종료)</td></tr><tr><th>측정</th><td><code>time.perf_counter</code>, <code>cv2.getTickCount</code>, 단계별 누적 통계, 이동평균 FPS</td></tr><tr><th>가속</th><td><code>cv2.UMat</code>, <code>cv2.ocl.setUseOpenCL</code>, <code>cv2.setNumThreads</code>, <code>cv2.resize</code> 보간법(<code>INTER_NEAREST</code> / <code>INTER_AREA</code>) 비교</td></tr><tr><th>보고서</th><td><code>pandas</code> 집계 + <code>matplotlib</code> 그래프 저장</td></tr></tbody></table></div>
+  <h4>준비할 데이터</h4>
+  <p>같은 영상을 해상도 3종(640×480 / 1280×720 / 1920×1080)으로 준비합니다. 측정 결과를 믿을 수 있도록 <strong>조건마다 60초 이상, 3번 반복 측정한 평균</strong>을 씁니다.</p>
+  <h4>5일 진행 흐름</h4>
+  <ol class="days"><li><span class="dn">Day 1</span><span>공통 처리 흐름 확정, 측정 방법 설계(무엇을, 몇 번, 어떻게 잴지)</span></li><li><span class="dn">Day 2</span><span>버전 ① 구현과 단계별 시간 측정, 가장 느린 단계 찾기</span></li><li><span class="dn">Day 3</span><span>버전 ② 멀티스레드 구조 구현, 큐 크기 정책 실험</span></li><li><span class="dn">Day 4</span><span>최적화 기법 4가지 이상을 하나씩 적용·측정, 가장 좋은 조합 찾기</span></li><li><span class="dn">Day 5</span><span>보고서 자동화, <strong>"20 FPS 만들기 체크리스트"</strong> 작성과 발표</span></li></ol>
+  <h4>제출물</h4>
+  <p><code>pipeline_v1.py</code> / <code>v2.py</code> / <code>v3.py</code>, <code>benchmark.py</code>, FPS 비교표·그래프, 다른 팀이 교과 14에서 바로 쓸 수 있는 최적화 체크리스트 한 쪽</p>
+  <details class="hint"><summary>막히기 쉬운 지점과 힌트</summary><ul><li><code>cv2.imshow</code>와 <code>cv2.waitKey</code>는 반드시 <strong>메인 스레드</strong>에서 불러야 합니다. 화면 표시만 따로 스레드로 빼면 프로그램이 멈추거나 창이 뜨지 않습니다.</li><li>큐 크기를 제한하지 않으면 처리가 밀릴 때 지연이 끝없이 쌓입니다. <code>maxsize</code>를 두고, 가득 차면 오래된 프레임을 버리는 것이 실시간 시스템의 정석입니다.</li><li>종료할 때 스레드가 남아 프로그램이 안 꺼지는 문제가 흔합니다. <code>Event</code> 플래그로 멈추라고 알리고 <code>join()</code>으로 기다리세요.</li><li>파이썬의 GIL 때문에 순수 파이썬 계산은 스레드를 나눠도 빨라지지 않습니다. 그런데 OpenCV 내부 연산과 카메라 읽기 대기 시간에는 GIL이 풀려서 효과가 납니다. 이 이유를 발표에서 설명할 수 있으면 만점입니다.</li><li>측정값은 매번 조금씩 다릅니다. 3회 평균과 함께 표준편차도 제시하세요.</li></ul></details>
+  <p class="next"><strong>이 경험은 어디로 이어지나요?</strong> 교과 13 OnDevice 실습, 교과 14(20 FPS)·교과 15(30 FPS) 목표 성능 달성 전략의 바탕이 됩니다.</p>
+</section>
+<section id="list"><h2>전체 주제 한눈에 보기</h2><div class="tbl"><table class="grid"><thead><tr><th>번호</th><th>주제</th><th>난이도</th><th>권장 인원</th><th>이어지는 교과</th></tr></thead><tbody><tr><td><a href="#p01">P01</a></td><td>데이터셋 품질 점검 · 썸네일 시트 생성기</td><td><span class="lvdot" style="--lv:#2F7D55">★☆☆☆</span></td><td>2명</td><td>8 · 14</td></tr><tr><td><a href="#p02">P02</a></td><td>조명 얼룩 보정 · 이진화 방법 비교 도구</td><td><span class="lvdot" style="--lv:#2F7D55">★☆☆☆</span></td><td>2명</td><td>9 · 14</td></tr><tr><td><a href="#p03">P03</a></td><td>색상으로 분류하고 개수 세기</td><td><span class="lvdot" style="--lv:#2F7D55">★☆☆☆</span></td><td>2~3명</td><td>9 · 14</td></tr><tr><td><a href="#p04">P04</a></td><td>실시간 영상 필터 스튜디오 · FPS 측정기</td><td><span class="lvdot" style="--lv:#2A67A8">★★☆☆</span></td><td>2명</td><td>14 · 15</td></tr><tr><td><a href="#p05">P05</a></td><td>미니 라벨링 툴 — 마우스로 박스 그리기</td><td><span class="lvdot" style="--lv:#2A67A8">★★☆☆</span></td><td>2~3명</td><td>7 · 8</td></tr><tr><td><a href="#p06">P06</a></td><td>문서·라벨 자동 평면화 스캐너</td><td><span class="lvdot" style="--lv:#2A67A8">★★☆☆</span></td><td>2명</td><td>9</td></tr><tr><td><a href="#p07">P07</a></td><td>기준 영상 비교 결함 검사기</td><td><span class="lvdot" style="--lv:#A86A12">★★★☆</span></td><td>3명</td><td>9 · 14</td></tr><tr><td><a href="#p08">P08</a></td><td>특징점 매칭 파노라마 · 물체 찾기</td><td><span class="lvdot" style="--lv:#A86A12">★★★☆</span></td><td>2~3명</td><td>9 · 10</td></tr><tr><td><a href="#p09">P09</a></td><td>통과 개수 세기 — 배경 차분과 객체 추적</td><td><span class="lvdot" style="--lv:#A86A12">★★★☆</span></td><td>3명</td><td>10 · 15</td></tr><tr><td><a href="#p10">P10</a></td><td>컨베이어 이물 검출 시스템 시제품</td><td><span class="lvdot" style="--lv:#A8342A">★★★★</span></td><td>3명</td><td>14</td></tr><tr><td><a href="#p11">P11</a></td><td>작업장 안전 감시 — 구역 침입 감지와 자동 녹화</td><td><span class="lvdot" style="--lv:#A8342A">★★★★</span></td><td>3명</td><td>15</td></tr><tr><td><a href="#p12">P12</a></td><td>실시간 처리 속도 최적화 — 멀티스레드와 성능 측정</td><td><span class="lvdot" style="--lv:#A8342A">★★★★</span></td><td>2~3명</td><td>13 · 14 · 15</td></tr></tbody></table></div></section>
+<section id="submit"><h2>최종 제출 체크리스트</h2><ul class="check"><li><label><input type="checkbox"> <span>GitHub 저장소 링크 — 커밋 20회 이상, 팀원 모두의 커밋이 있어야 합니다</span></label></li><li><label><input type="checkbox"> <span><code>README.md</code> — 주제 소개, 설치·실행 방법, 스크린샷, 역할 분담</span></label></li><li><label><input type="checkbox"> <span>실행되는 소스 코드 — 함수로 나눈 구조, <code>config.json</code>, <code>requirements.txt</code></span></label></li><li><label><input type="checkbox"> <span>정답표 20건 이상과 성능 측정 결과표</span></label></li><li><label><input type="checkbox"> <span><code>실험기록.md</code> — 파라미터별 결과 비교, 실패 사례와 원인</span></label></li><li><label><input type="checkbox"> <span>최종 보고서 5~8쪽 — 문제 정의 / 접근 방법 / 결과 / 한계와 개선 방향</span></label></li><li><label><input type="checkbox"> <span>시연 영상 1~2분</span></label></li><li><label><input type="checkbox"> <span>발표 자료 7~10장 — 발표 7분, 질의응답 3분</span></label></li></ul></section>
+<footer>교과 3 · 이미지 프로세싱(OpenCV) 팀 프로젝트 안내서 · Windows 11 + Anaconda, Python 3.9 / 3.10 기준</footer>
+</div></main>
+<script>
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{
+ const t=b.closest('.code').querySelector('code').innerText;
+ const done=()=>{b.textContent='복사됨';setTimeout(()=>b.textContent='복사',1400)};
+ if(navigator.clipboard){navigator.clipboard.writeText(t).then(done,()=>fallback(t,done))}else fallback(t,done)}));
+function fallback(t,done){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove();done()}
+const rail=document.getElementById('rail'),menu=document.getElementById('menu');
+menu.addEventListener('click',()=>{rail.classList.toggle('open');menu.textContent=rail.classList.contains('open')?'닫기':'목차'});
+rail.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{rail.classList.remove('open');menu.textContent='목차'}));
+const links=[...rail.querySelectorAll('a')],map={};links.forEach(a=>map[a.getAttribute('href').slice(1)]=a);
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&map[e.target.id]){links.forEach(l=>l.classList.remove('on'));map[e.target.id].classList.add('on')}}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>io.observe(s));
+window.addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(d=>d.open=true));
+</script>
+</body></html>
