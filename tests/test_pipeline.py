@@ -1,4 +1,7 @@
-"""B integration tests: temporary synthetic videos and explicit mock only."""
+"""B 파이프라인 통합 테스트: 임시 합성 영상·설정과 명시적 Mock으로 실행 경로를 검증한다.
+입력은 pytest fixture와 대역이며 출력은 단언 결과 및 임시 CSV·영상이다.
+순차·스레드·분석 생략, 원본 녹화 보존, 종료·오류 전달을 확인한다.
+실제 A 검출·카메라·GUI·공식 성능 실험은 검증하지 않는다."""
 import csv
 import json
 from pathlib import Path
@@ -15,6 +18,8 @@ from src.pipeline import run_pipeline, validate_config, FrameSource, EventLedger
 
 @pytest.fixture
 def video(tmp_path):
+    """tmp_path에 10 FPS·64×48·40프레임 합성 영상을 만들고 경로를 반환한다.
+    실제 촬영 자료가 아니며 MJPG writer를 열 수 있어야 한다."""
     path = tmp_path/'TEST_ONLY.avi'
     writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*'MJPG'), 10, (64,48))
     assert writer.isOpened()
@@ -26,17 +31,23 @@ def video(tmp_path):
 
 @pytest.fixture
 def config(tmp_path):
+    """tmp_path 아래 결과 경로와 GUI 없는 명시적 Mock 설정을 반환한다.
+    테스트 속도를 위해 사전·사후 시간을 0.5초로 줄이며 실제 기본 3초·5초 검증과 구분한다."""
     return validate_config(dict(output_dir=str(tmp_path/'results'), no_display=True,
                                 mock_detection=True, warmup_frames=0,
                                 pre_seconds=.5, post_seconds=.5))
 
 
 def read_rows(path):
+    """path의 UTF-8 CSV를 문자열 값의 행 딕셔너리 목록으로 반환한다. 파일 오류는 전파한다."""
     with open(path, newline='', encoding='utf-8') as stream:
         return list(csv.DictReader(stream))
 
 
 def test_baseline_mock(video, config):
+    """합성 video와 config로 순차 실행의 사건 시각·지속 시간·파일 및 40개 계측 행을 확인한다.
+    Mock 결과가 별도 경로에 저장되는지 검증하며 실제 감지 정확도나 처리 속도의 합격 기준은 아니다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     assert run_pipeline(video, 'baseline', config) == 0
     root = Path(config['output_dir'])/'mock'
     rows = read_rows(root/'events.csv')
@@ -57,6 +68,9 @@ def test_baseline_mock(video, config):
 
 @pytest.mark.parametrize('mode', ['baseline', 'threaded', 'optimized'])
 def test_modes_cli(video, config, tmp_path, mode):
+    """임시 영상·설정으로 세 mode의 CLI 종료 코드와 Mock 표시를 확인한다.
+    subprocess를 제한 시간 내 실행하며 GUI·실제 A 검출은 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     path = tmp_path/'config.json'
     path.write_text(json.dumps(config))
     r = subprocess.run([sys.executable, '-m', 'src.main', '--config', str(path),
@@ -67,6 +81,9 @@ def test_modes_cli(video, config, tmp_path, mode):
 
 
 def test_real_a_error_not_hidden(video, config):
+    """실제 경로의 A 미구현 오류가 Mock으로 대체되지 않고 전파되는지 확인한다.
+    현재 A가 스텁이라는 전제의 테스트이며 A 구현 완료 후에는 이 전제를 재검토해야 한다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config.update(mock_detection=False, zones_path='missing.json')
     with pytest.raises(NotImplementedError):
         run_pipeline(video, 'baseline', config)
@@ -74,6 +91,9 @@ def test_real_a_error_not_hidden(video, config):
 
 
 def test_optimized_skip_preserves_recording(video, config):
+    """40개 입력 중 20개만 분석해도 사건 클립은 원본 간격의 21프레임을 갖는지 확인한다.
+    컨테이너 프레임 수를 검증하며 압축 후 각 픽셀의 완전 일치까지 검증하지는 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config.update(frame_interval=2, post_seconds=.5)
     run_pipeline(video, 'optimized', config)
     root = Path(config['output_dir'])/'mock'
@@ -81,22 +101,28 @@ def test_optimized_skip_preserves_recording(video, config):
     assert len(raw) == 40 and sum(r['analyzed']=='True' for r in raw)==20
     clips = read_rows(next(root.glob('runs/*/clips.csv')))
     cap = cv2.VideoCapture(clips[0]['path'])
-    # 1.1s pre-buffer start through 3.1s end includes every original 0.1s tick.
+    # 분석 간격으로 경보·해제가 늦어져도 1.1~3.1초 원본은 0.1초 간격의 21프레임을 유지한다.
     assert cap.get(cv2.CAP_PROP_FRAME_COUNT) == 21
     cap.release()
 
 
 class FakeCapture:
-    """Finite/erroring capture fixture; no external video or device access."""
+    """외부 영상·카메라 없이 유한 프레임이나 읽기 오류를 제공하는 캡처 대역이다.
+    장치 드라이버의 블로킹이나 코덱 처리는 재현하지 않는다."""
     def __init__(self, source, fail=False):
+        """호출 규약용 source와 오류 주입 여부 fail을 받고 상태를 준비한다. 반환값은 없다."""
         self.released = False
         self.count = 0
         self.fail = fail
     def isOpened(self):
+        """입력 열기 성공을 모사하는 True를 반환한다."""
         return True
     def get(self, prop):
+        """prop에 해당하는 고정 FPS·크기를 반환하고 나머지 속성은 0으로 모사한다."""
         return {cv2.CAP_PROP_FPS:10, cv2.CAP_PROP_FRAME_WIDTH:64, cv2.CAP_PROP_FRAME_HEIGHT:48}.get(prop, 0)
     def read(self):
+        """검은 합성 프레임을 최대 10개 반환한 뒤 (False, None)으로 EOF를 알린다.
+        fail이면 두 번째 읽기에서 RuntimeError를 주입한다."""
         self.count += 1
         if self.fail and self.count == 2:
             raise RuntimeError('worker failed')
@@ -104,10 +130,14 @@ class FakeCapture:
             return False, None
         return True, np.zeros((48,64,3), dtype=np.uint8)
     def release(self):
+        """해제 호출 여부를 표시한다. 실제 장치 자원은 없으며 반환값은 없다."""
         self.released = True
 
 
 def test_full_queue_block_and_shutdown(config):
+    """용량 1의 Queue를 채워 생산자가 대기하고 드롭 없이 종료되는지 확인한다.
+    FakeCapture로 스레드 종료·캡처 해제를 검증하며 실제 장치의 멈춘 read까지 재현하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config['queue_max_size'] = 1
     reader = FrameSource('fake', config, True, capture_factory=FakeCapture)
     iter(reader)
@@ -124,6 +154,9 @@ def test_full_queue_block_and_shutdown(config):
 
 
 def test_worker_error_delivered(config):
+    """먼저 큐에 들어간 프레임 뒤에 생산자 RuntimeError가 전달되는지 확인한다.
+    finally에서 종료하고 스레드와 캡처가 남지 않는지도 검증한다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     reader = FrameSource('fake', config, True, capture_factory=lambda s: FakeCapture(s, True))
     try:
         it = iter(reader)
@@ -136,12 +169,17 @@ def test_worker_error_delivered(config):
 
 
 def test_drop_policy_rejected(config):
+    """원본 보존 경로 없이 drop_oldest를 요청하면 설정 검증에서 ValueError가 나는지 확인한다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config['queue_policy'] = 'drop_oldest'
     with pytest.raises(ValueError, match='lossless'):
         validate_config(config)
 
 
 def test_ledger_concurrent_dedup():
+    """두 구역의 중복 경보를 사건당 한 번만 기록하고 첫 비침입 관측 기준 지속 시간을 확인한다.
+    장부 메타데이터 검증이며 A의 해제 판단 알고리즘 자체를 시험하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     ledger = EventLedger('run', 'v', 'baseline', True)
     ledger.observe({'a': True, 'b': True}, 1)
     packet = dict(captured_at=time.perf_counter(), media_time_s=2)
@@ -155,6 +193,9 @@ def test_ledger_concurrent_dedup():
 
 
 def test_input_resize_keeps_native_recording(video, config):
+    """분석 입력을 32×24로 줄여도 저장 영상은 원본 64×48인지 확인한다.
+    요약 CSV의 실험 해상도와 녹화 해상도를 구분하며 실제 ROI 복원 정확도는 별도다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config['input_resolution'] = [32,24]
     run_pipeline(video, 'optimized', config)
     root = Path(config['output_dir'])/'mock'
@@ -167,6 +208,9 @@ def test_input_resize_keeps_native_recording(video, config):
 
 
 def test_replay_boundary_resets_and_monotonic(video, config):
+    """짧은 합성 영상을 반복하여 cycle 증가·누적 시각 단조 증가·사건 ID 고유성·스레드 정리를 확인한다.
+    실제 A 배경 모델의 재학습 결과나 재생 경계의 검출 품질은 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config.update(loop_video=True, duration_seconds=.15, recording_enabled=False)
     run_pipeline(video, 'threaded', config)
     root = Path(config['output_dir'])/'mock'
@@ -180,18 +224,25 @@ def test_replay_boundary_resets_and_monotonic(video, config):
 
 
 def test_common_a_adapter_roi_coordinates(monkeypatch):
+    """monkeypatch로 A 함수를 대체하여 ROI 여유·면적 축척·복원 박스 전달을 확인한다.
+    복원값을 직접 반환하는 대역이므로 A의 실제 좌표 변환이나 다각형 판정 정확도를 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     from src import pipeline
     called = {}
     def prep(frame, config, roi):
+        """ROI 인자를 기록하고 고정 분석 영상과 transform을 반환하는 전처리 대역이다."""
         called['roi'] = roi
         return frame[:10,:10], dict(scale_x=.5, scale_y=.5, offset_x=0, offset_y=0)
     def motion(frame, background, min_area):
+        """전달된 min_area를 기록하고 고정 박스를 반환하여 면적 축척 연결을 검증한다."""
         called['min_area'] = min_area
         return [(1,2,3,4)]
     def restore(boxes, transform):
+        """입력 boxes를 기록하고 고정 복원 박스를 반환한다. 실제 좌표 변환 계산은 수행하지 않는다."""
         called['boxes'] = boxes
         return [(2,4,6,8)]
     def intrusion(boxes, zones):
+        """복원된 boxes가 전달되었는지 단언하고 고정 구역 침입 딕셔너리를 반환한다."""
         assert boxes == [(2,4,6,8)]
         return {'z':True}
     monkeypatch.setattr(pipeline.preprocess, 'preprocess_frame', prep)
@@ -206,6 +257,9 @@ def test_common_a_adapter_roi_coordinates(monkeypatch):
 
 
 def test_skips_do_not_extend_observed_positive_span():
+    """None 관측 자체가 양성 관측 종료 시각을 늘리지 않고 미확정 시작 후보를 지우는지 확인한다.
+    다음 양성 시각까지의 sampled_spans는 관측 범위이며 그 사이의 연속 침입을 입증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     ledger = EventLedger('r','v','optimized',True)
     ledger.observe({'z':True}, 1)
     ledger.observe(None, 2)
@@ -216,15 +270,21 @@ def test_skips_do_not_extend_observed_positive_span():
 
 
 def test_failure_finalizes_open_writer(video, config, monkeypatch):
+    """분석 중 의도한 오류로 열린 녹화가 정리되고 실패 상태와 미확정 종료 시각이 저장되는지 확인한다.
+    테스트 대역으로 예외를 주입하며 파일 존재 확인이 완전한 영상 복구 보장을 의미하지는 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     from src import pipeline
     sessions=[]
     original_create=pipeline.create_recorder
     def create(*args):
+        """원래 생성자에 args를 전달하고 생성 세션을 수집한 뒤 반환하여 종료 상태를 검사할 수 있게 한다."""
         s=original_create(*args)
         sessions.append(s)
         return s
     class FailingMock(pipeline.MockBackend):
+        """녹화가 시작된 후 분석 오류를 주입하기 위한 Mock 대역이다."""
         def analyze(self, frame, packet):
+            """세 번째 입력에서 RuntimeError를 내고 나머지는 기존 Mock 분석 결과를 반환한다."""
             if packet['frame_index']==2:
                 raise RuntimeError('analysis test failure')
             return super().analyze(frame, packet)
@@ -243,6 +303,9 @@ def test_failure_finalizes_open_writer(video, config, monkeypatch):
 
 
 def test_realtime_schedule(video,config):
+    """10 FPS 합성 입력의 예정 시각 간격 0.1초와 예정 시각 이전에 투입하지 않음을 확인한다.
+    상한 지연이나 실제 카메라 실시간 처리 성능은 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config.update(experiment_kind='realtime',duration_seconds=.15,recording_enabled=False)
     run_pipeline(video,'baseline',config)
     raw=read_rows(Path(config['output_dir'])/'mock'/'benchmark_raw.csv')
@@ -253,11 +316,16 @@ def test_realtime_schedule(video,config):
 
 
 def test_headless_preview(video):
+    """합성 video로 --preview --no-display 경로가 0을 반환하는지 확인한다. GUI 렌더링은 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     from src.main import main
     assert main(['--source',video,'--preview','--no-display'])==0
 
 
 def test_pts_failure_releases_capture(config):
+    """반복된 PTS를 반환하는 대역으로 시각 검증 오류가 전달되고 캡처가 해제되는지 확인한다.
+    실제 VFR 파일과 장치별 PTS 지원 여부는 검증하지 않는다.
+    반환값은 없으며 기대 조건 위반은 단언 실패로 보고한다."""
     config['timestamp_mode']='pts'
     reader=FrameSource('fake',config,True,capture_factory=FakeCapture)
     try:

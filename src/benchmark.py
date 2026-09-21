@@ -27,7 +27,8 @@ RAW_FIELDS = ['run_id', 'source', 'pipeline_mode', 'resolution', 'variant', 'rep
 
 @contextmanager
 def measure(row: dict, stage: str):
-    """Measure a block into row[stage+'_ms']; record even when the block raises."""
+    """row에 stage + _ms 키로 블록의 perf_counter 경과 시간을 밀리초 단위로 기록한다.
+    컨텍스트 안에서 예외가 나도 소요 시간을 남기고 원래 예외를 전파한다. 별도 값을 반환하지 않는다."""
     start = time.perf_counter()
     try:
         yield
@@ -36,7 +37,8 @@ def measure(row: dict, stage: str):
 
 
 def _stats(values) -> dict[str, float]:
-    """Return finite-value mean/median/population std/p95; empty values yield NaN."""
+    """values에서 유한한 수만 골라 평균·중앙값·모표준편차(ddof=0)·95백분위수 딕셔너리를 반환한다.
+    None·빈 문자열·비유한 값은 제외하며 표본이 없으면 NaN을 사용한다. 숫자 변환 오류는 전파한다."""
     a = np.asarray([float(x) for x in values if x is not None and x != ''], dtype=float)
     a = a[np.isfinite(a)]
     if not len(a):
@@ -46,11 +48,15 @@ def _stats(values) -> dict[str, float]:
 
 
 def summarize_metrics(rows: list[dict[str, Any]]) -> dict[str, float]:
-    """Exclude warm-up, validate monotonic completion, then aggregate actual samples.
-    Input rows use Python bool flags and perf_counter seconds. Throughput uses the
-    complete measured interval including read/queue/display/record costs; FPS
-    samples use successive analyzed completion intervals. Empty stats are NaN.
-    """
+    """프레임 rows의 준비 구간(warmup)을 제외하고 실제 측정 표본의 통계 딕셔너리를 반환한다.
+    플래그는 Python bool, 완료 시각과 측정 구간은 perf_counter 초 단위를 기대한다.
+    throughput_fps는 분석 완료 수를 전체 측정 경과 시간으로 나눈 처리량이다.
+    입력·큐·표시·저장 비용을 포함하며 원본 영상의 FPS와는 다르다. mean_fps 등은
+    연속 분석 완료 간격의 역수 표본 통계이므로 throughput_fps와 일반적으로 일치하지 않는다.
+    생략과 드롭은 따로 집계하고 단계별 시간·경보 지연은 존재하는 유한 표본만 사용한다.
+    alert_delay_s는 영상 시간의 관측→경보 지연, system_alert_delay_ms는 실제 투입→경보,
+    scheduled_alert_delay_ms는 예정 투입→경보의 벽시계 지연이다.
+    완료 시각 역행·중복 또는 양수가 아닌 측정 구간은 ValueError이며 빈 통계는 NaN이다."""
     measured = [r for r in rows if not r.get('warmup', False)]
     analyzed = [r for r in measured if r.get('analyzed', True) and not r.get('dropped', False)]
     ends = np.asarray([r['completed_at'] for r in analyzed], dtype=float)
@@ -77,9 +83,10 @@ def summarize_metrics(rows: list[dict[str, Any]]) -> dict[str, float]:
 
 
 def write_table(path: str | Path, rows: list[dict], fields: list[str], *, append=False) -> None:
-    """Write fixed-schema UTF-8 CSV, ignoring extra keys; caller serializes writers.
-    Append validates existing schema; no synchronous per-frame writes are used.
-    """
+    """rows를 fields 순서의 UTF-8 CSV로 path에 저장하며 반환값은 없다.
+    추가 키는 무시한다. append=True이면 기존 헤더가 일치해야 하며 불일치는 ValueError다.
+    프레임마다 디스크를 쓰지 않고 모은 행을 저장하기 위한 함수다. 동시 쓰기 직렬화는 호출자 책임이며
+    파일 시스템 오류는 전파한다."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists() and path.stat().st_size > 0
@@ -95,12 +102,15 @@ def write_table(path: str | Path, rows: list[dict], fields: list[str], *, append
 
 
 def write_metrics(path: str, rows: list[dict[str, Any]]) -> None:
-    """Write buffered frame rows with stable headers; empty input writes a header."""
+    """프레임 rows를 path에 고정 RAW_FIELDS 헤더로 저장한다. 반환값은 없다.
+    빈 입력도 헤더를 남겨 스키마를 유지하며 파일 오류는 write_table에서 전파한다."""
     write_table(path, rows, RAW_FIELDS)
 
 
 def save_run_metrics(root: Path, run_dir: Path, rows: list[dict], metadata: dict) -> dict:
-    """Save immutable per-run samples and append root aggregates after execution."""
+    """실행 후 rows 통계와 metadata를 합친 요약 딕셔너리를 반환하고 CSV를 저장한다.
+    run_dir에는 해당 실행 자료를 저장하고 root에는 누적 자료를 추가한다.
+    호출자는 실행마다 고유한 run_dir을 제공해야 한다. 집계·헤더 불일치·파일 오류는 전파한다."""
     summary = {**metadata, **summarize_metrics(rows)}
     write_metrics(str(run_dir / 'benchmark_raw.csv'), rows)
     write_table(root / 'benchmark_raw.csv', rows, RAW_FIELDS, append=True)
@@ -111,9 +121,11 @@ def save_run_metrics(root: Path, run_dir: Path, rows: list[dict], metadata: dict
 
 
 def generate_plots(summary_path: str | Path, output_dir: str | Path) -> list[Path]:
-    """Plot only existing measured rows; empty or invalid data returns [] with notice.
-    Each experiment kind is kept separate. Mock plots carry a MOCK watermark.
-    """
+    """summary_path의 완료된 실행 자료로 그래프를 만들고 생성한 Path 목록을 반환한다.
+    output_dir에 저장하며 자료가 없거나 유효 처리량이 없으면 안내 후 빈 목록을 반환한다.
+    source·실험 종류·Mock 여부가 섞이면 비교 해석을 막기 위해 ValueError를 낸다.
+    Mock 그래프에는 식별 문구를 표시하고 Agg를 사용하여 GUI 없이 그린다.
+    필수 컬럼 누락이나 파일·라이브러리 오류는 호출자에게 전달한다."""
     import pandas as pd
     path = Path(summary_path)
     if not path.exists() or path.stat().st_size == 0:
@@ -163,12 +175,13 @@ def generate_plots(summary_path: str | Path, output_dir: str | Path) -> list[Pat
 
 def evaluate_events(truth: list[dict], events: list[dict], *, video_name: str,
                     tolerance_s: float = 0.0, mock: bool = False) -> dict:
-    """One-to-one maximum bipartite matching by video, zone and interval overlap.
-    Truth types: intrusion/normal. Events must come from ONE run. False alarm rate
-    = unmatched alarms / all alarms, miss rate = unmatched truth / intrusion truth.
-    Normal windows are annotations, not an invented count of true negatives.
-    Open events and mock outputs are rejected. Empty denominators return NaN.
-    """
+    """truth와 단일 실행 events를 video_name·구역·시간 구간 겹침으로 일대일 최대 매칭한다.
+    tolerance_s는 구간 겹침 허용 오차(초)이며 기본 0이다. 검출 수·오경보·미검출·지연 통계를 반환한다.
+    중복 경보는 한 정답을 여러 번 맞힌 것으로 세지 않는다. 오경보율은 미매칭 경보/전체 경보이며
+    정상 프레임 기준 FPR이 아니다. 미검출률은 미매칭 정답/전체 침입 정답이다.
+    normal 행은 참고 구간일 뿐 정상 판정 수를 만들어 내지 않는다. 평균 지연은 매칭된 경보 시각에서
+    정답 시작을 뺀 값이다. 분모가 없으면 NaN이다. Mock·여러 실행·미종료 사건·잘못된 구간이나
+    허용 오차는 ValueError로 거부하고 필수 키·숫자 형식 오류는 전파한다."""
     if mock or any(str(e.get('mock', '')).lower() in ('true', '1') for e in events):
         raise ValueError('Mock cannot be used for detection accuracy')
     if not np.isfinite(tolerance_s) or tolerance_s < 0:
@@ -192,7 +205,8 @@ def evaluate_events(truth: list[dict], events: list[dict], *, video_name: str,
     assigned = {}
 
     def match(i, visited):
-        """Augment one matching path; visited truth indices prevent recursion cycles."""
+        """경보 인덱스 i의 연결을 재배치하여 매칭 수를 늘릴 수 있으면 True를 반환한다.
+        visited 정답 인덱스로 순환 탐색을 막는다. 단순 선착순 배정으로 가능한 매칭을 놓치지 않기 위함이다."""
         for j in candidates[i]:
             if j in visited:
                 continue
@@ -216,11 +230,14 @@ def evaluate_events(truth: list[dict], events: list[dict], *, video_name: str,
 def run_suite(source: str, config: dict, *, seconds=60.0, repeats=3,
               experiment_kind='throughput', mock=False, no_display=False,
               resolutions=((640, 480), (1280, 720), (1920, 1080)), ablations=False) -> None:
-    """Run >=60 measured wall seconds/condition, >=3 repeats; replay short files.
-    Resize the SAME real source at input and transform zones from native geometry.
-    Each EOF resets A's model/state; recorder finalizes truncated boundary clips.
-    No synthetic source is created. Optional ablations are single-change variants.
-    """
+    """동일한 source 파일을 해상도·모드·반복 조건별로 실행하고 그래프를 저장한다. 반환값은 없다.
+    config를 조건별로 복사하며 seconds는 준비 구간 이후 벽시계 측정 시간, repeats는 반복 수다.
+    60초 미만·3회 미만 또는 존재하지 않는 영상 파일은 ValueError로 거부한다.
+    throughput은 최대 처리량, realtime은 예정 시각에 맞춘 투입이다. mock은 연결 검증용으로만 사용한다.
+    입력 해상도를 바꾸면 구역 좌표도 변환하되 녹화 원본은 유지한다. 짧은 파일은 반복해서 읽고
+    경계마다 모델·상태를 초기화하며 진행 중 클립은 절단한다. 준비 구간 제외는 실행 최초에만 적용한다.
+    ablations는 최적화 항목을 개별 적용한 조건을 추가한다. 실제 영상이나 성능 수치를 합성하지 않으며
+    하위 파이프라인 오류는 전파한다."""
     from .pipeline import run_pipeline
     if seconds < 60 or repeats < 3:
         raise ValueError('Formal benchmark requires >=60 seconds and >=3 repeats')
@@ -252,7 +269,9 @@ def run_suite(source: str, config: dict, *, seconds=60.0, repeats=3,
 
 
 def main(argv=None) -> int:
-    """Parse benchmark suite/plots CLI; invalid input returns an argparse error."""
+    """argv로 공식 실험 또는 기존 CSV 그래프 생성 경로를 선택한다. None이면 프로세스 인자를 읽는다.
+    성공 시 0을 반환한다. 처리 대상 설정·입출력·미구현 오류는 argparse 오류로 바꿔
+    SystemExit(2)로 종료한다. --plot-only는 새 성능 실험을 실행하지 않는다."""
     from .utils import load_config
     ap = argparse.ArgumentParser(description='Real video benchmark; mock results are isolated')
     ap.add_argument('--source')

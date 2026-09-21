@@ -37,9 +37,10 @@ CLIP_FIELDS = ['path', 'event_ids', 'zone_name', 'alert_time_s', 'occurred_at', 
 
 
 def validate_config(config: dict) -> dict:
-    """Copy and validate B/C settings without changing shared A function signatures.
-    Invalid values or unsupported drop policy fail before opening input/writers.
-    """
+    """config를 깊은 복사하여 B·C 기본값을 채우고 검증된 설정 딕셔너리를 반환한다.
+    호출자의 설정과 A 함수 시그니처는 변경하지 않는다. 잘못된 값이나 지원하지 않는 드롭 정책은
+    입력·writer를 열기 전에 ValueError로 거부한다. 별도 무손실 녹화 경로가 없으므로
+    Queue에서 원본을 버리는 drop_oldest는 허용하지 않는다. 필수 구조의 형식 오류도 전파한다."""
     c = deepcopy(config)
     defaults = dict(queue_max_size=8, queue_policy='block', frame_interval=1,
                     consecutive_frames=5, clear_frames=10, min_area=200, blur_kernel=5,
@@ -89,13 +90,17 @@ def validate_config(config: dict) -> dict:
 
 
 class FrameSource:
-    """One capture owner, sequential iterator or bounded block Queue producer.
-    File timestamps use index/FPS (CFR) or strictly increasing CAP_PROP_POS_MSEC.
-    Camera timestamps use perf_counter. Exceptions are delivered after queued data.
-    """
+    """캡처 하나를 소유하며 프레임 패킷을 순차 또는 제한 크기 Queue로 공급한다.
+    입력 스레드는 읽기·입력 크기 변환·큐 삽입을 담당하고 분석·상태·녹화·GUI는 소비자가 담당한다.
+    파일 시각은 CFR의 인덱스/FPS 또는 증가하는 PTS, 카메라는 perf_counter 경과 초를 쓴다.
+    큐가 차면 생산자가 기다려 원본을 보존한다. 종료·오류는 큐 밖의 Event와 error로 전달하여
+    가득 찬 큐에 종료 표식을 넣다가 멈추지 않게 한다. 소비자는 이미 큐에 있는 자료부터 받는다."""
 
     def __init__(self, source: str, config: dict, threaded=False, *, capture_factory=None):
-        """Open capture, validate metadata, initialize stop/done Events; no worker yet."""
+        """source를 열어 FPS·크기를 검증하고 종료 신호와 큐를 준비한다. 아직 스레드는 시작하지 않는다.
+        config는 검증된 설정, threaded는 입력 스레드 사용 여부, capture_factory는 테스트용 대체 생성자다.
+        숫자 source는 카메라다. 파일 FPS 누락·잘못된 크기·카메라 반복은 ValueError, 열기 실패는 OSError다.
+        초기화 실패 시 캡처를 해제하며 생성자 반환값은 없다."""
         self.config, self.threaded = config, threaded
         self.camera = str(source).isdigit()
         if self.camera and config['loop_video']:
@@ -127,7 +132,12 @@ class FrameSource:
         self.closed = False
 
     def _packets(self):
-        """Read/copy original frames; loop boundaries are explicit packets, never hidden."""
+        """캡처를 읽어 프레임·인덱스·영상 시각·계측 시각이 담긴 패킷을 차례로 산출한다.
+        original_frame은 디코드 원본, frame은 입력 해상도 실험에 맞춘 영상이다. 같은 크기이면
+        같은 배열을 참조하므로 이후 버퍼 저장·화면 그리기에서 복사하여 원본을 보호한다.
+        반복 재생은 cycle로 드러내고 누적 offset으로 영상 시각의 단조 증가를 유지한다.
+        realtime 파일은 예정 시각까지 기다리며 read_ms에는 의도한 대기를 넣지 않는다.
+        빈 입력·되감기 실패는 OSError, 잘못되거나 증가하지 않는 시각은 ValueError다. 종료 시 캡처를 해제한다."""
         index, cycle, local_index, offset = 0, 0, 0, 0.0
         epoch = time.perf_counter()
         last_media, first_pts = None, None
@@ -165,7 +175,7 @@ class FrameSource:
                 if not self.camera and self.config['experiment_kind'] == 'realtime':
                     if self.stop.wait(max(0, scheduled - time.perf_counter())):
                         break
-                    acquired = time.perf_counter()  # time frame is admitted to the system
+                    acquired = time.perf_counter()  # 재생 대기가 끝나 프레임이 실제 시스템에 투입된 시각
                 original_frame = frame
                 resize_start = time.perf_counter()
                 if self.size != self.native_size:
@@ -186,7 +196,9 @@ class FrameSource:
             self.cap.release()
 
     def _produce(self):
-        """Block with timeouts; publish failure out-of-band so full Queue cannot hide it."""
+        """패킷을 Queue에 넣는 생산자이며 반환값은 없다.
+        큐가 가득 차면 짧은 타임아웃으로 재시도하면서 stop을 확인한다. 읽기 오류는 error에 보관하고
+        finally에서 캡처 해제와 done 신호를 보내 소비자가 큐 소진 뒤 오류 또는 EOF를 받게 한다."""
         try:
             for packet in self._packets():
                 while not self.stop.is_set():
@@ -204,7 +216,8 @@ class FrameSource:
             self.done.set()
 
     def __iter__(self):
-        """Start once; consumer remains on main thread."""
+        """자신을 반복자로 반환하고 최초 호출에서만 스레드 또는 순차 생성기를 시작한다.
+        소비자의 분석·녹화 작업은 이 메서드가 별도 스레드로 옮기지 않는다."""
         if self.threaded:
             if self.thread is None:
                 self.thread = threading.Thread(target=self._produce, name='opencv-input', daemon=True)
@@ -214,7 +227,9 @@ class FrameSource:
         return self
 
     def __next__(self):
-        """Deliver buffered packet, then worker error/EOF; consumer never hangs on EOF."""
+        """다음 패킷을 반환한다. 스레드 모드에서는 큐의 패킷을 먼저 소비한다.
+        빈 큐에서 done을 확인한 뒤 저장된 생산자 예외를 전달하거나 StopIteration으로 끝낸다.
+        타임아웃을 두어 EOF 뒤 무기한 Queue.get에 갇히지 않게 한다. 먼저 iter로 시작해야 한다."""
         if not self.threaded:
             return next(self.generator)
         while True:
@@ -228,10 +243,10 @@ class FrameSource:
                     raise StopIteration
 
     def close(self):
-        """Signal stop and join; reject blocked device shutdown instead of hiding it.
-        A native camera read may ignore interruption; bounded shutdown cannot be
-        guaranteed by OpenCV on every device. A daemon prevents interpreter hangs.
-        """
+        """stop 신호를 보내고 입력 스레드 종료를 기다린 뒤 캡처를 해제한다. 반환값은 없다.
+        이미 닫았다면 아무 작업도 하지 않는다. thread_join_timeout 안에 끝나지 않으면 RuntimeError다.
+        일부 장치의 OpenCV read는 중단 신호를 따르지 않으므로 모든 장치의 제한 시간 내 종료를 보장하지 않는다.
+        daemon은 해당 스레드 때문에 인터프리터 종료가 막히는 것을 줄일 뿐 장치 읽기를 강제 취소하지 않는다."""
         if self.closed:
             return
         self.stop.set()
@@ -246,7 +261,13 @@ class FrameSource:
 
 
 def _analysis(frame, background_subtractor, zones, config) -> tuple[dict, list, dict]:
-    """Call A's shared functions and return intrusion, original boxes and stage ms."""
+    """입력 frame에 A의 전처리·움직임 검출·구역 판정을 적용하고 (침입 dict, 복원 박스, 단계 ms)를 반환한다.
+    background_subtractor는 실행의 배경 모델, zones는 입력 좌표의 다각형, config는 분석 설정이다.
+    ROI는 모든 구역을 감싸는 범위에 여유를 더하고 입력 경계로 자른다. 전처리의 transform은
+    ROI offset과 분석/입력 scale을 담는다. 검출 최소 면적에는 scale_x*scale_y를 곱하고,
+    박스는 A의 restore_boxes로 입력 좌표에 복원한 뒤 같은 좌표계의 구역과 비교한다.
+    여기서 입력 좌표는 input_resolution 적용 후 기준이며 녹화용 native 원본과 다를 수 있다.
+    실제 변환·판정은 A 구현에 위임하고 미구현 및 OpenCV 오류는 그대로 전달한다."""
     timing = {}
     roi = None
     if config['roi_enabled'] and zones:
@@ -269,15 +290,20 @@ def _analysis(frame, background_subtractor, zones, config) -> tuple[dict, list, 
 
 def analyze_frame(frame: np.ndarray, background_subtractor: Any,
                   zones: list[dict[str, Any]], config: dict[str, Any]) -> dict[str, bool]:
-    """Preserved public A-composition interface: original frame/settings -> zone bools."""
+    """frame·배경 모델·zones·config로 분석하여 구역별 침입 bool 딕셔너리를 반환한다.
+    기존 공개 조합 인터페이스를 유지하며 박스와 계측값은 내부에서만 사용한다.
+    설정 검증 오류와 A 함수의 오류를 전파한다. zones 좌표는 frame 좌표와 일치해야 한다."""
     return _analysis(frame, background_subtractor, zones, validate_config(config))[0]
 
 
 class RealBackend:
-    """Thin adapter to unchanged A interfaces; never falls back to mock silently."""
+    """A의 기존 인터페이스를 연결하는 실제 분석 어댑터다.
+    픽셀 기반 전처리·검출과 상태 판정을 A에 위임하며 실패해도 Mock으로 자동 전환하지 않는다."""
 
     def __init__(self, config, native_size, size):
-        """Load native zones through A and scale only for explicit input experiments."""
+        """config의 구역 파일을 native_size 기준으로 읽고 필요하면 size 입력 좌표로 변환한다.
+        각 축의 크기 비율을 곱하고 반올림한다. 이 입력 크기 변환은 이후 ROI·분석 축소 변환과 별개다.
+        배경 모델과 상태를 초기화하며 반환값은 없다. A의 구역 로딩·모델 생성 오류는 전파한다."""
         self.config = config
         self.zones = zone_module.load_zones(config['zones_path'], native_size)
         if native_size != size:
@@ -288,29 +314,33 @@ class RealBackend:
         self.reset()
 
     def reset(self):
-        """Fresh background model and state at each replay boundary."""
+        """반복 재생 경계에서 배경 모델을 새로 만들고 상태를 비운다. 반환값은 없다.
+        이전 재생 끝과 다음 시작을 연속 사건으로 보지 않기 위함이며 A 모델 생성 오류는 전파한다."""
         self.background = detect.create_background_subtractor(self.config)
         self.states = {}
 
     def analyze(self, frame, packet):
-        """Original frame/packet -> zone booleans, boxes, timing through common A path."""
+        """frame을 공통 A 경로로 분석하여 (구역별 bool, 입력 좌표 박스, 단계 ms)를 반환한다.
+        packet은 공통 backend 호출 규약을 위한 인자이며 여기서는 쓰지 않는다. A 오류는 전파한다."""
         return _analysis(frame, self.background, self.zones, self.config)
 
     def update(self, intrusions, packet):
-        """Call A state even for skipped(None) frames; original index/time preserved."""
+        """intrusions와 packet의 원본 인덱스·영상 시각을 A 상태 함수에 전달하고 (상태, 전이)를 반환한다.
+        분석 생략은 False 대신 None으로 전달하여 비침입 관측으로 오인하지 않게 한다. A 오류는 전파한다."""
         self.states, events = state.update_state(self.states, intrusions, packet['frame_index'],
                                                  packet['media_time_s'], self.config)
         return self.states, events
 
 
 class MockBackend:
-    """Explicit test fixture with scripted times; does NOT implement A algorithms/N.
-    Default schedule: observed 1s, alert 1.5s, clear 2.5s. No accuracy inference.
-    """
+    """픽셀 대신 미리 정한 시간표로 동작하는 명시적 테스트 대역이다.
+    기본 관측 시작은 1초, 경보는 1.5초, 해제는 2.5초다. A의 검출 알고리즘이나
+    연속 감지 N 조건을 구현하지 않으므로 결과로 실제 정확도나 검출 속도를 판단하면 안 된다."""
     is_mock = True
 
     def __init__(self, config, size):
-        """Validate scripted schedules and create visible full-frame mock zones."""
+        """config의 mock_events 시간표를 복사하고 size 전체를 덮는 가상 구역을 만든다.
+        관측 시작≤경보<해제 조건 위반은 ValueError다. 필수 키 오류도 전파하며 반환값은 없다."""
         self.schedule = deepcopy(config.get('mock_events', [dict(zone_name='MOCK_ZONE', start=1.0, alert=1.5, end=2.5)]))
         for e in self.schedule:
             if not (0 <= e['start'] <= e['alert'] < e['end']):
@@ -321,12 +351,14 @@ class MockBackend:
         self.reset()
 
     def reset(self):
-        """Clear fixture emission flags at replay boundary."""
+        """재생 경계에서 전이 발행 여부와 구역 상태를 초기화한다. 반환값은 없다.
+        다음 재생에서도 같은 시간표를 다시 시험할 수 있도록 한다."""
         self.alerted, self.cleared = set(), set()
         self.states = {z['name']: {'status': 'IDLE'} for z in self.zones}
 
     def analyze(self, frame, packet):
-        """Return scheduled booleans and a clearly mock box, without inspecting pixels."""
+        """packet의 재생 내 시각으로 (구역별 bool, 가상 박스, detect_ms)를 반환한다.
+        frame은 박스 크기 계산에만 쓰고 픽셀을 검사하지 않는다. 이 시간은 실제 검출 비용이 아니다."""
         start = time.perf_counter()
         t = packet['cycle_time_s']
         values = {z['name']: any(e['zone_name'] == z['name'] and e['start'] <= t < e['end'] for e in self.schedule) for z in self.zones}
@@ -334,7 +366,9 @@ class MockBackend:
         return values, ([(w//4, h//4, w//2, h//2)] if any(values.values()) else []), {'detect_ms': (time.perf_counter()-start)*1000}
 
     def update(self, intrusions, packet):
-        """Emit fixture transitions only on analyzed frames; no stale-success counting."""
+        """분석한 프레임에서만 시간표 전이를 발행하고 (상태, 전이 목록)을 반환한다.
+        intrusions=None이면 상태를 유지하고 빈 전이를 반환한다. 생략 프레임을 감지 성공으로 세지 않는다.
+        packet의 누적 영상 시각을 전이에 넣되 시간표 판단은 재생 내 시각을 사용한다."""
         if intrusions is None:
             return self.states, []
         t = packet['cycle_time_s']
@@ -355,20 +389,22 @@ class MockBackend:
 
 
 class EventLedger:
-    """B metadata adapter: observations enrich A transitions, never decide alerts.
-    Starts/ends are first observed true/first false in the confirmed clear streak.
-    Unknown skipped observations invalidate pending streaks, not confirmed events.
-    """
+    """A의 전이를 사건 CSV 메타데이터로 보강하는 기록 어댑터이며 경보를 결정하지 않는다.
+    시작은 최초 침입 관측, 끝은 해제 확정으로 이어진 첫 비침입 관측을 사용한다.
+    생략된 관측은 미확정 시작·해제 후보를 무효화하지만 확정 사건을 임의로 끝내지 않는다."""
 
     def __init__(self, run_id, source, mode, mock):
-        """Initialize per-run metadata and per-zone onset/clear observation maps."""
+        """run_id·source 파일명·mode·mock 정보를 보관하고 사건 및 구역별 관측 맵을 준비한다.
+        실행과 반복 사이의 사건 ID 충돌을 막기 위한 초기 상태이며 반환값은 없다."""
         self.run_id, self.source, self.mode, self.mock = run_id, Path(str(source)).name, mode, mock
         self.rows, self.active, self.starts, self.false_starts = {}, {}, {}, {}
         self.ids = {}
         self.sampled_spans = {}
 
     def observe(self, intrusions, t):
-        """Track observed candidate onset/end only; None never counts as detection."""
+        """intrusions와 영상 초 t로 시작·해제 후보를 갱신한다. 반환값은 없다.
+        None은 알 수 없는 관측이므로 검출로 세지 않는다. sampled_spans는 관측된 양성 시각 범위이며
+        생략 구간 전체가 실제 침입이었다는 증거나 연속 검출 횟수를 뜻하지 않는다."""
         if intrusions is None:
             self.starts = {z: start for z, start in self.starts.items() if z in self.active}
             self.false_starts.clear()
@@ -387,7 +423,10 @@ class EventLedger:
                 self.starts.pop(zone, None)
 
     def transitions(self, events, packet, cycle):
-        """Normalize IDs and enrich CSV rows without changing A event dictionaries."""
+        """events를 복사하여 실행 전체의 고유 ID로 정규화하고 새로 처리한 전이 목록을 반환한다.
+        packet의 실제·예정 투입 시각으로 시스템 지연을 계산하고 cycle로 반복 간 ID 충돌을 막는다.
+        A가 시작·끝 시각을 제공하면 우선하며 없으면 관측 후보로 보완한다. 중복 전이는 무시한다.
+        시작이 경보보다 늦거나 끝이 시작보다 빠르면 ValueError이며 입력 사건 딕셔너리는 수정하지 않는다."""
         normalized = []
         now = time.perf_counter()
         for original in events:
@@ -425,14 +464,16 @@ class EventLedger:
         return normalized
 
     def attach_clips(self, clips):
-        """Attach finished video paths once; preserve independent event IDs."""
+        """완료된 clips의 경로와 절단 여부를 해당 사건 행에 연결한다. 반환값은 없다.
+        파일별 독립 event_ids를 유지하며 장부에 없는 ID는 건너뛴다."""
         for clip in clips:
             for key in clip['event_ids']:
                 if key in self.rows:
                     self.rows[key].update(video_path=clip['path'], truncated=clip['truncated'])
 
     def finish(self, reason):
-        """Mark unresolved events censored at EOF/error; do not invent an end time."""
+        """미해제 사건에 reason 상태를 남기고 관측 후보를 비운다. 반환값은 없다.
+        EOF·오류 시 실제 해제 시각을 알 수 없으므로 종료 시각과 지속 시간을 만들어 넣지 않는다."""
         for key in self.active.values():
             self.rows[key]['status'] = reason
         self.active.clear()
@@ -442,14 +483,17 @@ class EventLedger:
 
 
 def _draw(frame, mode, fps, zones, boxes, states, recording, mock):
-    """Draw original-coordinate overlays on a copy; caller is always the main thread."""
+    """frame 복사본에 구역·박스·상태·녹화 여부·Mock 구분과 fps를 그려 반환한다.
+    zones와 boxes는 frame과 같은 입력 좌표여야 한다. 원본 녹화에 표시가 섞이지 않도록 복사한다.
+    fps는 직전 프레임 처리 완료 간격의 역수이며 집계 처리량과 다르다. 메인 스레드에서 호출하며
+    잘못된 도형·프레임의 OpenCV 오류는 전파한다."""
     out = frame.copy()
     for index, zone in enumerate(zones):
         points = np.asarray(zone['points'], dtype=np.int32)
         cv2.polylines(out, [points], True, (0, 220, 220), 2)
         cv2.putText(out, f'Zone {index+1}', tuple(points[0]),
                     cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 220, 220), 1)
-        # OpenCV Hershey fonts do not render Korean; labels are indexed in metadata.
+        # OpenCV 기본 글꼴은 한글을 지원하지 않아 번호로 표시하고 실제 이름은 메타데이터에 보존한다.
     for x, y, w, h in boxes:
         cv2.rectangle(out, (x, y), (x+w, y+h), (0, 255, 0), 2)
     alert = any(s.get('status') == 'ALERT' for s in states.values())
@@ -465,7 +509,8 @@ def _draw(frame, mode, fps, zones, boxes, states, recording, mock):
 
 
 def _file_hash(source):
-    """Stream SHA-256 without loading video into RAM; camera has no file hash."""
+    """source 파일을 작은 청크로 읽어 SHA-256 문자열을 반환하고 카메라 번호이면 None을 반환한다.
+    실험 입력의 동일성을 확인하되 영상 전체를 메모리에 올리지 않기 위함이다. 파일 오류는 전파한다."""
     if str(source).isdigit():
         return None
     digest = hashlib.sha256()
@@ -476,11 +521,15 @@ def _file_hash(source):
 
 
 def run_pipeline(source: str, mode: str, config: dict[str, Any], *, backend=None) -> int:
-    """Run baseline/threaded/optimized; existing three positional args are preserved.
-    Optional backend must explicitly declare is_mock=True and implements reset,
-    analyze/update/zones. A errors propagate. All original frames reach recorder,
-    including frame_interval skips; output is finalized on EOF, q, error, Ctrl-C.
-    """
+    """source·mode·config로 감시를 실행하고 정상 종료 시 0을 반환한다.
+    baseline은 순차 입력, threaded와 optimized는 입력 스레드와 Queue를 사용한다.
+    분석·상태·녹화·표시는 소비 경로에서 수행하며 optimized에서만 ROI·분석 축소·간격을 적용한다.
+    선택적 backend는 reset/analyze/update/zones와 is_mock=True를 갖춘 테스트 대역이어야 한다.
+    원본은 분석 전에 버퍼에 넣고 분석 생략 시에도 record_frame에 전달한다. None 관측으로
+    상태를 갱신하므로 생략을 비침입이나 검출 성공으로 바꾸지 않는다. 큐 드롭은 허용하지 않는다.
+    EOF·q·시간 제한·오류·Ctrl-C에서 정리와 결과 저장을 시도한다. 중단 시 큐에 남은 프레임까지
+    모두 녹화하는 것은 아니며 pending_at_stop에 생산·처리 차이를 남긴다.
+    잘못된 설정·모드·대역은 ValueError, 메인 스레드 밖 GUI는 RuntimeError이며 A 오류도 전파한다."""
     c = validate_config(config)
     if mode not in ('baseline', 'threaded', 'optimized'):
         raise ValueError('Unknown mode')
