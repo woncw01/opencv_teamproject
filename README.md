@@ -1,44 +1,23 @@
 # 작업장 위험 구역 감시 및 실시간 영상 처리 최적화
 
-Python/OpenCV로 작업장 다각형 위험 구역의 움직임을 감시하고, 같은 영상으로 순차 처리·멀티스레드·최적화 성능을 비교하는 5일 팀 프로젝트입니다. **현재는 초기 구조와 인터페이스 설계 단계**입니다. 실제 안전 시스템으로 검증하지 않았으며 감지·경고·녹화·측정은 아직 구현되지 않았습니다.
+Python/OpenCV로 작업장 다각형 위험 구역의 움직임을 감시하고 같은 영상으로 순차 처리·멀티스레드·최적화 성능을 비교하는 5일 팀 프로젝트입니다. MOG2 배경 차분과 외곽선을 사용하며 외부 AI 객체 검출 모델은 필수가 아닙니다. 사람 식별·객체 추적은 기본 범위 밖입니다.
 
-## 문제 정의와 목표
+**현재 B·C의 파이프라인·녹화·계측·실험 자동화는 구현되었고, A의 감지·구역·상태 함수는 아직 스텁입니다.** 실제 모드는 A 구현을 호출하며 미구현 오류를 숨기지 않습니다. `--mock-detection`은 B·C 연결을 검증하는 시험용 시간표입니다. 실제 촬영 영상의 FPS·정확도·안전성은 아직 측정하지 않았습니다.
 
-움직이는 물체의 위험 구역 침입을 검출하고 N프레임 연속 감지 후 경고합니다. 사건 전 3초부터 경고 해제 후 5초까지 원본 영상을 보존하며 발생 시각·지속 시간·구역 이름을 CSV로 남깁니다. 동일 입력과 판정 기준에서 FPS, 경고 지연, 오경보·미검출을 함께 비교합니다. 외부 AI 검출 모델은 필수가 아니며 MOG2 배경 차분과 외곽선을 사용합니다. 사람 식별이나 객체 추적은 기본 범위에 포함하지 않습니다.
+## 문제 정의와 개발 목표
 
-## 핵심 기능과 아키텍처
+고정 카메라 영상에서 위험 구역 침입을 검출하고 N프레임 연속 감지 후 경고합니다. 사건 확정 전 3초와 이후 5초 이상 영상을 보존하고, 침입 시작·경보 확정·종료를 구분하여 CSV에 기록합니다. 같은 입력·판정·출력 조건에서 FPS, 단계별 병목, 경고 지연, 오경보·미검출을 함께 비교합니다.
 
-```text
-main → pipeline → utils (입력·설정)
-                → zones (구역 로드)
-                → preprocess → detect → 원본 좌표 복원 → detect.check_intrusion
-                → state → 사건 CSV (pipeline 책임)
-                → recorder (원본 영상 저장만)
-                → benchmark (측정 원자료·집계)
-                → 메인 스레드 화면 표시
-```
-
-`pipeline.analyze_frame` 하나가 세 버전에서 같은 `preprocess_frame`, `detect_motion`, `check_intrusion`을 호출합니다. 알고리즘을 버전별로 복제하지 않습니다.
-
-| 버전 | 실행 구조 | 적용 설정 |
-|---|---|---|
-| baseline | 읽기→전처리→움직임→침입→상태→표시/저장 순차 | 원본 해상도, 전체 화면, 매 프레임 |
-| threaded | 입력 worker→제한 Queue→메인 분석/표시/저장 | baseline과 동일 분석 설정 |
-| optimized | threaded 구조 + 선택적 최적화 | analysis_resolution, roi_enabled, frame_interval |
-
-baseline/threaded에서는 ROI=False, 분석 크기=원본, 간격=1로 유효 설정을 구성할 예정입니다. 출력 기능과 MOG2·침입 기준·N·해제 기준은 동일합니다. 유효 설정은 실행별 결과에 저장합니다. `--preview`는 기존 그레이스케일 데모이며 Baseline 성능으로 사용하지 않습니다.
-
-## 전체 폴더와 책임
-
-현재 작업 디렉터리를 프로젝트 루트로 사용합니다. 별도의 중첩 project_name 폴더를 만들지 않습니다.
+## 구조 및 담당 파일
 
 ```text
 team_project/
 ├── README.md
+├── CONTRIBUTING.md
 ├── requirements.txt
 ├── config.json
 ├── .gitignore
-├── check_env.py                       # 기존 환경 점검 보존
+├── check_env.py
 ├── src/
 │   ├── main.py
 │   ├── utils.py
@@ -50,183 +29,295 @@ team_project/
 │   ├── pipeline.py
 │   └── benchmark.py
 ├── data/
-│   ├── samples/                       # 실행 시 생성, Git 제외
+│   ├── samples/                     # Git 제외, main에서 생성
 │   └── SOURCES.md
-├── results/                           # 실행 시 생성, Git 제외
+├── results/                         # Git 제외, 실행 시 생성
+├── tests/
+│   ├── test_benchmark.py
+│   ├── test_recorder.py
+│   └── test_pipeline.py
 └── docs/
     ├── 수행계획서.md
     ├── 실험기록.md
-    └── 최종보고서.md
+    ├── 최종보고서.md
+    └── ground_truth_template.csv
 ```
 
-기존 교육용 HTML과 `:Zone.Identifier` 파일도 그대로 보존합니다. `src`는 Python namespace package로 실행하므로 `__init__.py`를 추가하지 않았습니다.
+기존 교육용 HTML 및 부가 파일은 보존합니다. `src`는 namespace package이며 루트에서 모듈로 실행합니다.
 
-| 파일 | 담당 | 책임 / 추가 이유 |
+| 파일 | 담당 | 책임 / 분리 이유 |
 |---|---|---|
-| main.py | B | CLI, 설정 기본 검사, 출력 폴더 준비, 실행 진입 |
-| utils.py | 공통 | 기존 이미지 I/O, 입력, FPS, JSON 유틸리티; 구현·시그니처 보존 |
-| preprocess.py | A | 전처리·축소·좌표 복원 |
-| detect.py | A | MOG2 움직임 및 위험 구역 침입 판정만 |
-| zones.py | A | 추가: 다각형 편집·JSON I/O를 감지와 분리 |
-| state.py | A | 추가: 구역별 연속 감지와 상태 전이를 감지와 분리 |
-| recorder.py | B | 추가: 시간 버퍼와 영상 저장 수명 관리를 분리; CSV·침입 판정 금지 |
-| pipeline.py | B | 추가: 공통 분석 경로, 실행 방식, 사건 CSV 조립 |
-| benchmark.py | C | 추가: 측정 정의와 통계/CSV를 감지와 분리 |
-| config.json | 공통 | 초기 실험 설정 |
-| requirements.txt | 공통 | 기존 패키지 버전 유지 |
-| check_env.py | 공통 | 기존 버전·이미지 저장 점검; 설명만 추가 |
-| data/SOURCES.md | 공통 | 영상 출처·촬영·권한 기록 |
-| docs/수행계획서.md | 공통 | 일정·역할·완료 기준 |
-| docs/실험기록.md | C | 실행별 조건과 실제 측정 기록 |
-| docs/최종보고서.md | C | 병목·성능·정확도 분석 |
-| README.md / .gitignore | 공통 | 개발 계약·사용 안내 / 영상 및 환경 파일 제외 |
+| src/preprocess.py | A | 공통 전처리·좌표 복원 (이번 변경 없음) |
+| src/detect.py | A | MOG2 움직임 및 침입 판정만 (이번 변경 없음) |
+| src/zones.py | A | 다각형 마우스 편집과 JSON 저장·로딩 분리 (이번 변경 없음) |
+| src/state.py | A | N프레임·경보 해제·상태 전이 분리 (이번 변경 없음) |
+| src/main.py | B | CLI·설정·기존 그레이스케일 preview |
+| src/pipeline.py | B | 실행 모드, A 호환 계층, 입력 스레드, Mock, 화면, 사건 CSV |
+| src/recorder.py | B | 원본 시간 버퍼·구역별 사건 영상만 저장; 감지·CSV 제외 |
+| src/benchmark.py | C | 단계 계측·통계·CSV·실험 반복·그래프·정답 매칭 |
+| src/utils.py | 공통 | 기존 유틸리티 구현·시그니처 보존 |
+| config.json / README.md | 공통 | 초기 실험 설정 / 실행·인터페이스 계약 |
+| requirements.txt / check_env.py | 공통 | 기존 고정 패키지 / 환경 점검 보존 |
+| CONTRIBUTING.md / .gitignore | 공통 | Fork·PR 규칙 / 데이터·환경·비밀 파일 제외 |
+| data/SOURCES.md | 공통 | 영상 출처·촬영자·촬영일·권한 기록 |
+| docs/수행계획서.md | 공통 | 5일 일정·팀 역할 |
+| docs/실험기록.md / 최종보고서.md | C | 실제 측정 기록·병목 및 정확도 분석 |
+| docs/ground_truth_template.csv | C | 추가: 실제 영상 정답 사건표의 고정 컬럼 |
+| tests/test_*.py | B·C | 추가: 합성 프레임·임시 영상으로 기능과 실패 경로 검증 |
 
-## 함수 인터페이스와 데이터 계약
+## 시스템 아키텍처와 세 버전
 
-모든 새 기능은 `NotImplementedError` 스텁입니다. 상세 매개변수, 반환 타입, 순서, 경계 조건은 각 함수 docstring을 기준으로 구현합니다. 기존 공통 함수 변경이 필요하면 이유·호출부 영향을 설명하고 팀 합의 후 적용합니다.
+```text
+main → FrameSource → 원본 시간 버퍼 → A preprocess → A detect → A state
+                                      ↓                  ↓
+                               원본 좌표 복원      B EventLedger
+                                                        ↓
+                      main thread 화면 ← 상태/박스    사건 CSV
+                                                        ↓
+                                               recorder 원본 클립
+              모든 단계의 perf_counter 표본 → benchmark → 종료 후 CSV
+```
 
-| 함수 | 입력 → 출력 |
-|---|---|
-| preprocess_frame | 원본 ndarray, 설정, 선택 ROI → 분석 ndarray, 변환 dict |
-| restore_boxes | 분석 박스, 변환 dict → 원본 박스 목록 |
-| create_background_subtractor | 설정 dict → MOG2 객체 |
-| detect_motion | 분석 ndarray, MOG2, 분석 면적 기준 → (x,y,w,h) 목록 |
-| check_intrusion | 원본 박스, 구역 목록 → dict[str,bool] |
-| edit_zones / save_zones / load_zones | 원본 영상 → 구역 목록 / 경로·구역·크기 → None / 경로·크기 → 구역 목록 |
-| update_state | 상태 dict, 감지 dict 또는 None, 원본 index, 영상 초, 설정 → 새 상태 dict, 전이 목록 |
-| create_recorder | 설정, 원본 FPS, 원본 크기 → 녹화 세션 dict |
-| record_frame / close_recorder | 세션·원본 영상·영상 초·전이 / 세션 → 종료 클립 메타데이터 목록 |
-| analyze_frame | 원본 영상, MOG2, 구역, 유효 설정 → 구역별 bool |
-| run_pipeline | source str, mode str, config dict → 종료 코드 int |
-| summarize_metrics / write_metrics | 표본 목록 → 통계 dict / 경로·표본 목록 → None |
-| main / process | CLI → 종료 코드 / 기존 BGR 영상 → 그레이스케일 BGR 영상 |
+| 모드 | 실행 구조 | 분석 설정 |
+|---|---|---|
+| baseline | 읽기·버퍼·분석·상태·표시·녹화 순차 | 전체 입력, 원본 분석 크기, 간격 1 |
+| threaded | 입력 worker → bounded Queue → 메인 분석/표시/녹화 | baseline과 동일 |
+| optimized | threaded 구조 + 개별 최적화 | ROI, 축소, 간격, 큐 크기 설정 적용 |
 
-- 영상: `np.ndarray`, H×W×3, uint8 BGR. 녹화는 원본 크기·원본 시간축을 유지합니다.
-- 박스는 (x,y,w,h), 다각형은 원본 좌표 [[x,y], ...]. 침입은 박스 **하단 중앙점**, 경계를 포함합니다. 최소 면적 200은 원본 픽셀 면적이며 축소 시 scale_x×scale_y를 곱합니다.
-- ROI는 전체 위험 구역의 합집합을 포함하는 단일 bounding rectangle로 시작합니다. 여러 ROI별 MOG2 복제는 하지 않습니다. crop/해상도가 바뀌면 MOG2를 초기화합니다.
-- 구역 JSON 계약: `{"schema_version":1,"frame_size":[1280,720],"zones":[{"name":"위험구역 A","points":[[100,100],[400,100],[400,400]]}]}`. 예시일 뿐 실제 구역 파일은 미생성입니다. 최소 3개 꼭짓점, 비영 면적, 자기 교차 금지, 이름 유일, 해상도 일치가 필요합니다.
-- 상태 dict: `{zone_name: {status, hit_count, clear_count, last_frame_index, last_media_time_s, event_id, alert_time_s}}`. 전이 dict: `{type: "alert"|"cleared", event_id: str, zone_name: str, frame_index: int, media_time_s: float, duration_s: float|None}`. 사건 ID는 실행 ID+구역+순번으로 유일하게 만듭니다. alert의 duration_s는 None입니다.
-- IDLE→DETECTING→ALERT→CLEARED. N=1이면 즉시 ALERT, DETECTING에서 False면 IDLE. ALERT에서 clear_frames 연속 False면 CLEARED. CLEARED는 다음 분석에서 새 감지를 시작합니다. 구역별 독립 상태입니다.
-- **N은 연속된 원본 프레임의 성공 판정 횟수**입니다. 미분석(None)이나 원본 index 공백은 hit/clear 카운터를 초기화하고 ALERT 자체는 유지합니다. 생략 프레임을 직전 True로 채우지 않습니다. 따라서 frame_interval>1은 N>1에서 경고를 막을 수 있습니다. 최초 최적화 비교는 간격=1, 간격 조정은 정확도 저하를 포함하는 별도 실험으로 표시합니다. 이 의미를 바꾸려면 팀 합의가 필요합니다.
-- 파일 영상 시간은 FPS가 유효한 경우 원본 index/FPS, 가변 FPS는 검증된 PTS를 사용합니다. 카메라는 수집 monotonic 경과 시간입니다. 성능 시간은 perf_counter, 실제 처리 발생 시각은 timezone 포함 ISO 8601로 따로 기록합니다. 업로드 파일의 촬영 시각을 추정하지 않습니다.
+세 버전의 실제 검출은 모두 동일한 A 함수 경로를 호출합니다. `resize_enabled=False`이면 분석 크기를 입력 크기로 설정하여 A 전처리 축소를 끕니다. ROI는 모든 구역을 포함한 사각형에 `roi_margin` 픽셀 여유를 더하고 영상 범위로 제한합니다. `min_area`는 실험 입력 좌표계의 면적이며 crop/분석 축소 시 실제 scale_x×scale_y를 곱합니다. 원본 파일 해상도와 다른 실험 입력을 만들면 구역도 같은 비율로 변환됩니다. 서로 다른 **입력 해상도**의 정확도 비교에서는 물체 크기·최소 면적 효과를 별도로 해석해야 합니다.
 
-## 스레드·큐·녹화 계약
+원본 파일 프레임과 실험용 리사이즈 프레임은 packet에서 분리됩니다. 녹화는 언제나 원본 파일 크기이며 ROI/분석 축소 영상이 아닙니다. 이 실험은 같은 원본 파일의 디코딩 뒤 입력 크기를 바꾸는 방식이므로, 해상도별 디코더 성능 비교로 해석하면 안 됩니다.
 
-Queue packet은 `{frame_index, media_time_s, captured_at, frame}`이며 captured_at은 perf_counter 초입니다. 모든 프레임을 분석하지 않아도 recorder에는 원본 프레임을 순서대로 전달해야 합니다. 기본 `queue_policy=block`은 bounded Queue의 backpressure로 프레임을 보존합니다. `put/get` timeout, stop Event, EOF sentinel, worker 예외 전달, finally release/join을 구현합니다. imshow/waitKey 및 구역 편집은 메인 스레드에서만 실행합니다.
+### 입력 스레드와 프레임 생략
 
-`drop_oldest`는 향후 지연 실험용 예약 값입니다. 입력 시점 별도 원본 보존 경로와 사건 시각 동기화, 지연된 경고를 받을 수 있는 버퍼를 구현하기 전에는 거부해야 합니다. 드롭 수·원본 index 공백·녹화 무결성을 기록하며 block 실험과 분리합니다. 카메라는 block만으로 장치 내부 유실을 막을 수 없으므로 공정한 기본 비교는 파일을 사용합니다.
+`Queue(maxsize=queue_max_size)`에 원본 프레임을 순서대로 전달합니다. 기본 `block` 정책은 timeout put/get, stop/done Event, join으로 종료하며 worker 예외를 메인에 전달합니다. GUI는 메인 스레드에서만 호출합니다. 분석 간격에 따라 생략해도 원본은 recorder에 전달합니다.
 
-녹화는 alert 기준 이전 pre_seconds를 포함하고 ALERT 동안 지속하며 **cleared 이후 post_seconds**에 종료합니다. 여러 구역·재침입이 겹치면 클립을 병합하고 event_id 목록으로 연결합니다. 시작 시점에 3초가 없거나 EOF에서 5초가 없으면 확보한 만큼 저장하고 truncated=True로 기록합니다. EOF 시 미해제 사건은 CSV status=open_at_eof, duration_s는 빈칸으로 남깁니다. 원본 FPS 불명·writer 실패·메모리 한계는 명시적으로 처리합니다. deque에는 copy를 저장하고 영상 시각으로 오래된 프레임을 제거합니다. 메모리 예상값은 너비×높이×3×FPS×pre_seconds 바이트에 큐 비용을 더합니다.
+`--queue-policy drop_oldest` 옵션은 **명시적으로 오류 처리**합니다. 분석 큐와 별개로 원본을 보존할 저장 경로가 없으므로 드롭을 허용하지 않습니다. 실제 큐 드롭 수는 현재 0이며 분석 간격에 의한 생략률은 `skip_rate`로 별도 기록합니다. 종료 순간 입력 스레드가 미리 읽은 프레임은 `pending_at_stop`에 기록하며 정상 처리 중 드롭과 구분합니다. 카메라 드라이버 내부 유실은 OpenCV만으로 계수할 수 없습니다.
+
+A의 현재 계약은 **연속 원본 N프레임**입니다. 생략 프레임에는 `intrusions=None`을 전달하며 이전 True를 재사용하지 않습니다. A 계약대로라면 `frame_interval>1`과 `N>1` 조합은 경보를 막을 수 있습니다. 주 비교는 간격 1, 간격 최적화는 정확도 영향을 포함하는 별도 실험입니다. `observed_duration_s`는 마지막으로 관측된 True와 첫 True 사이 영상 시간이며 None에서 늘리지 않습니다. 생략 구간에 침입이 지속됐다고 단정하는 지표가 아닙니다.
 
 ## 환경 설정 및 실행
 
-프로젝트 루트에서 Python **3.10** 환경을 권장합니다. 기존 고정 패키지는 OpenCV contrib 4.10.0.84, NumPy 1.26.4, Pandas 2.2.2, Matplotlib 3.8.4입니다. Threading/Queue/Collections는 표준 라이브러리입니다. 기존 check_env의 3.9 안내와 달리 고정 NumPy/Matplotlib 조합에는 3.10을 사용하세요.
+프로젝트 루트에서 Python **3.10**을 사용합니다. 기존 requirements의 OpenCV contrib 4.10.0.84, NumPy 1.26.4, Pandas 2.2.2, Matplotlib 3.8.4를 유지합니다. Threading/Queue/Collections는 표준 라이브러리입니다.
 
 ```bash
 python3.10 -m venv .venv
 source .venv/bin/activate
 # Windows: .venv\Scripts\activate
 python -m pip install -r requirements.txt
+python -m pip install pytest
 python check_env.py
+python -m pytest -q tests -p no:cacheprovider
+```
+
+현재 가능한 연결 점검과 기존 미리보기:
+
+```bash
 python -m src.main --help
 python -m src.main --source data/samples/test.mp4 --mode baseline --dry-run
 python -m src.main --source data/samples/test.mp4 --preview
+python -m src.main --source data/samples/test.mp4 --preview --no-display
 ```
 
-`--help`, `--dry-run`은 초기 CLI 기능입니다. dry-run은 일부 설정 검사·폴더 생성만 하며 영상·구역의 존재나 전체 설정 스키마를 검증하지 않습니다. preview는 기존 실제 그레이스케일 화면 기능이며 영상 파일과 GUI 환경이 필요합니다. `q`로 종료합니다. 기존 `python src/main.py` 진입도 보존합니다. 기존 utils의 숫자 카메라 경로는 Windows CAP_DSHOW를 사용하므로 Linux 카메라 지원은 후속 TODO입니다.
+`--dry-run`은 설정만 검증하며 파일·카메라·A 기능을 검증하지 않습니다. `--preview`는 기존 그레이스케일 재생이며 실제 감시 Baseline으로 사용하지 않습니다. `q` 또는 Ctrl-C로 종료합니다. 기존 `python src/main.py`도 지원합니다. Linux 입력은 B 안에서 OpenCV 기본 backend를 사용하며 utils의 기존 CAP_DSHOW 코드는 변경하지 않았습니다.
 
-아래는 **파서가 지원하지만 감시 동작은 미구현**인 명령어입니다. 현재 안내 후 종료 코드 2를 반환합니다. 기본 mode는 baseline입니다.
+**A 코드와 실제 영상·구역 JSON이 준비되면** 다음 명령으로 감시합니다. 현재 A 스텁이면 오류 메시지와 종료 코드 2를 반환합니다.
 
 ```bash
-python -m src.main --source data/samples/test.mp4
 python -m src.main --source data/samples/test.mp4 --mode baseline
 python -m src.main --source data/samples/test.mp4 --mode threaded
 python -m src.main --source data/samples/test.mp4 --mode optimized
+python -m src.main --source data/samples/test.mp4 --mode baseline --no-display
 ```
 
-`--config config.json`으로 설정 파일을 선택합니다. source CLI가 config의 source보다 우선합니다. config 파일 기본 위치는 프로젝트 루트이며 설정 안의 상대 경로·출력 경로는 실행 작업 디렉터리 기준입니다. 항상 프로젝트 루트에서 실행하세요. 구역 편집 CLI는 후속 구현 대상입니다.
+B·C만 검증할 때는 준비한 영상에 명시적 Mock을 사용합니다.
 
-## 테스트 영상 준비
+```bash
+python -m src.main --source data/samples/test.mp4 --mode baseline --no-display --mock-detection
+python -m src.main --source data/samples/test.mp4 --mode threaded --no-display --mock-detection
+python -m src.main --source data/samples/test.mp4 --mode optimized --no-display --mock-detection
+```
 
-허가받은 고정 카메라 영상을 `data/samples/test.mp4`에 직접 준비하고 data/SOURCES.md를 작성합니다. 비침입·짧은 침입·N프레임 이상 침입·구역 경계·다중 구역·조명 변화·EOF 직전 사건을 포함합니다. 영상 해시, FPS, 해상도, 수동 침입 시작/종료 프레임을 기록합니다. 실제 영상·구역은 포함하지 않았습니다. data/samples와 results는 Git 제외이며 main 실행 시 자동 생성합니다.
+Mock은 픽셀을 분석하지 않고 1초에 관측 시작, 1.5초에 경보, 2.5초에 해제하는 시간표를 사용합니다. 스킵 중에는 전이를 발생시키지 않습니다. 영상이 짧으면 경보가 없을 수 있습니다. 화면·로그에 MOCK을 표시하고 결과는 `results/mock/`에만 저장합니다. Mock의 N·정확도·최적화 속도를 A 알고리즘 성능으로 해석하지 마세요. 테스트에서는 `run_pipeline(..., backend=fixture)`로 `is_mock=True`인 객체만 주입할 수 있습니다.
 
-## 설정값 설명
+`--config`로 설정 파일을 선택하고 `--source`가 config source보다 우선합니다. `--output-dir`, `--duration`(측정 벽시계 초), `--loop-video`, `--experiment-kind throughput|realtime`도 지원합니다. 상대 경로는 프로젝트 루트에서 실행하는 것을 기준으로 합니다.
 
-기본값은 초기 실험 제안이며 검증된 최적값이 아닙니다. 아직 감시 스텁에 적용되지 않습니다.
+## 자동 녹화 및 사건 CSV
 
-| 키 | 기본값 | 의미와 조정 방법 |
-|---|---|---|
-| source | data/samples/test.mp4 | 입력 파일 또는 숫자 카메라 문자열; CLI 우선 |
-| zones_path | data/zones.json | 원본 해상도와 일치하는 구역 JSON |
-| mog2.history | 500 | 배경 학습 길이; 환경 변화에 맞춰 조정 |
-| mog2.var_threshold | 16.0 | 배경 구분 임계값; 오경보/미검출 함께 확인 |
-| mog2.detect_shadows | true | 그림자 구분; 127은 움직임 마스크에서 제외 |
-| min_area | 200 | 원본 픽셀 최소 외곽선 면적; 해상도·작은 객체 고려 |
-| blur_kernel | 5 | 양의 홀수 블러 커널; 작은 객체 손실 주의 |
-| canny_low / canny_high | 50 / 150 | 기존 키 보존, MOG2 설계에서 사용하지 않음 |
-| consecutive_frames | 5 | 경고 진입 연속 원본 프레임 수; 1 이상 |
-| clear_frames | 10 | 경고 해제 연속 비침입 원본 프레임 수; 1 이상 |
-| pre_seconds / post_seconds | 3.0 / 5.0 | 사전 버퍼 / 해제 후 녹화 초; 0 이상 |
-| analysis_resolution | [640,360] | optimized 분석 최대 [너비,높이], 양의 정수; 종횡비 유지 |
-| roi_enabled | false | optimized에서 전체 구역을 포함한 crop 활성화 |
-| queue_max_size | 8 | threaded/optimized 큐 크기; 메모리·대기 시간 함께 조정 |
-| queue_policy | block | 프레임 보존 기본; drop_oldest는 선행 구현 필요 |
-| frame_interval | 1 | optimized 분석 간격; 1은 모든 프레임, N 계약 제약 확인 |
-| measure_fps | true | benchmark 수집 활성화; 기존 preview FPS와 별개 |
-| warmup_frames | 30 | 성능 집계 제외 원본 프레임 수; MOG2 학습은 수행 |
+`buffer_frame`은 분석 전에 `(영상 시각, 원본 copy)`를 deque에 보관합니다. `record_frame`은 같은 프레임을 중복 추가하지 않고 외부 사건 전이를 소비합니다. 기존 세 함수 시그니처는 보존했습니다.
 
-전체 스키마·범위 검사와 mode별 유효 설정 생성은 pipeline 초기화 TODO입니다.
+- 시작: 경보 확정 시각 `alert_time - pre_seconds`부터 확보한 원본을 기록합니다.
+- 종료: 경보가 유지되는 동안 계속 기록하고, 해제 전이를 받은 시각 이후 `post_seconds`를 추가 기록합니다. 최소 종료 예정 시각은 alert+post이며 장시간 침입은 해제까지 연장합니다.
+- 시작부터 3초가 없거나 EOF/중단/반복 경계에서 사후 구간이 부족하면 truncated로 표시합니다. 없는 프레임을 생성해 사후 5초를 채우지 않습니다.
+- 여러 구역·사건은 **독립 writer와 파일**을 사용합니다. 초기 설계의 겹침 병합 대신 이번 요구사항에 맞춰 분리했습니다. 같은 event_id의 반복 alert/clear는 중복 저장하지 않습니다.
+- 클립은 UTC 날짜와 사건 ID를 포함한 이름입니다. 명시적인 `recording_enabled=False`는 파일 저장만 끕니다.
 
-## 최적화 실험 및 결과 파일
+CFR 파일은 기본 `frame_index / source_fps`를 사용합니다. VFR 파일은 `timestamp_mode=pts`로 POS_MSEC를 사용하고 단조 증가하지 않으면 오류로 종료합니다. 카메라는 perf_counter 경과 시각이며 nominal FPS가 없으면 명시된 camera_fps를 사용합니다. 잘못된 파일 FPS는 조용히 추정하지 않습니다.
 
-같은 영상·구역·MOG2 초기화·판정 기준·경고/녹화/표시 설정·warm-up으로 비교합니다. 먼저 baseline, 다음 threaded, 이후 ROI만, 해상도만, 간격만, 큐 정책만 각각 바꾸고 마지막에 조합합니다. 실험당 최소 3회 반복하고 실행 순서를 교차합니다. 환경(CPU/OS/라이브러리), 원본 해시, 유효 설정, 분석/표시/녹화 프레임 수와 드롭을 기록합니다. GUI/저장 비용도 end-to-end 시간에 포함합니다.
+VideoWriter는 고정 FPS이므로 불규칙 시각은 **직전 프레임 유지**로 재표본화합니다. 누락된 출력 tick은 이전 프레임으로 채우고, 한 tick 안에 여러 입력이 있으면 모두 표현할 수 없습니다. `held_ticks`, `resampled_inputs`, `recording_fps`를 clips.csv에 기록합니다. 녹화 경로에 전달된 원본이 분석 생략 때문에 유실되는 것과 CFR 표현 한계를 구분합니다. native codec·해상도 지원 여부는 writer 열림으로 검사합니다.
 
-- `throughput_fps` = warm-up 이후 분석 완료 수 / 측정 구간 경과 초. 측정 시작·종료 경계를 원자료에 기록합니다.
-- `mean_fps`, `std_fps` = 연속 분석 완료 perf_counter 차이의 역수 표본 평균·모표준편차(ddof=0). 처리량과 혼용하지 않습니다. 표시 FPS는 별도입니다.
-- 단계 ms = read, queue_wait, preprocess, detect, intrusion, state, record, display. worker 읽기와 메인 처리는 겹치므로 합계를 전체 시간으로 간주하지 않습니다.
-- 경고 지연: 영상 기준 `alert_media_s - 수동 침입 시작 media_s`; 시스템 지연은 `alert_perf_counter - 해당 프레임 captured_at`. 파일 처리 속도로 촬영 당시 벽시계 지연을 추정하지 않습니다. 정답이 없으면 측정 불가로 표기합니다.
-- 사건 단위 오경보·미검출은 같은 구역의 정답 구간과 경고 구간의 시간 중첩으로 매칭합니다. 한 정답에 여러 경고가 있으면 중복 경고를 따로 집계하고, 정답 없는 경고는 오경보, 경고 없는 정답은 미검출입니다. warm-up 구간 정답은 제외 여부를 동일하게 명시합니다.
+사전 버퍼 메모리는 대략 너비×높이×3×FPS×pre_seconds 바이트이며 큐·동시 writer 메모리는 별도입니다. recorder_max_mb를 넘으면 무단 프레임 삭제 대신 오류로 종료합니다.
 
-아래 파일들은 **향후 생성 예정**이며 현재 가짜 결과는 만들지 않습니다.
+`results/events.csv`의 필수 컬럼:
 
-| 경로 | 내용 |
+| 컬럼 | 의미 |
 |---|---|
-| results/<run_id>/events.csv | event_id, zone_name, occurred_at(시간대 포함 처리 시각), alert_media_s, cleared_media_s, duration_s, status, clip_path |
-| results/<run_id>/clips/*.mp4 | 원본 FPS/크기 사건 영상; 사건 ID와 매핑 |
-| results/<run_id>/clips.csv | path, event_ids, start_s, end_s, truncated |
-| results/<run_id>/metrics.csv | frame_index, media_time_s, captured_at, completed_at, measurement_start_at, measurement_end_at, analyzed, dropped, warmup, 각 단계 *_ms |
-| results/<run_id>/summary.json | 처리량·FPS 통계·단계 평균; 미측정은 null |
-| results/<run_id>/effective_config.json | 실행 유효 설정, 환경, 영상 해시 |
-| results/<run_id>/plots/ | 실제 측정 기반 FPS·단계 비용 비교 그래프 |
+| event_id / zone_name | 실행 내·실행 간 유일한 사건 ID / 구역 |
+| start_time | 최초 침입 관측 영상 초 (A가 start_time_s를 제공하면 우선) |
+| alert_time | A가 경보를 확정한 영상 초 |
+| end_time | 해제 확정으로 이어진 첫 비침입 관측 영상 초 |
+| duration_seconds | end_time - start_time; 경보 시작 기준이 아님 |
+| video_path | 독립 사건 클립 파일 경로 |
+| pipeline_mode | baseline / threaded / optimized |
 
-metrics rows는 원본 프레임 단위이며 미분석 단계 시간은 빈칸입니다. summarize_metrics는 analyzed=True, warmup=False만 사용하고 완료 시각을 정렬·검증합니다. measurement_start_at/end_at은 해당 집계 구간의 공통 경계입니다. 드롭 표본과 측정 불가 값에 0을 임의로 채우지 않습니다. 사건 CSV는 pipeline, 성능 CSV는 benchmark, 영상만 recorder가 담당합니다.
+추가로 run_id, video_name, mock, status, occurred_at(처리 시각 ISO 8601), 입력·경보 perf_counter, 시스템 지연, onset_basis, truncated를 기록합니다. 관측 시각은 실제 촬영 정답을 대신하지 않습니다. 종료까지 해제되지 않은 사건은 end_time/duration을 빈칸으로 두고 open_at_eof/open_at_loop_boundary/failed 등으로 구분합니다. 정상 사건도 영상 후반 클립이 잘릴 수 있어 status와 truncated는 별개입니다.
 
-## 스크린샷 삽입 위치
+CSV는 사건당 한 행을 메모리에 유지하고 종료 시 저장합니다. 강제 프로세스 종료·전원 차단까지 내구성을 보장하지 않으며 여러 프로세스가 같은 output_dir에 동시에 쓰지 않도록 각자 경로를 지정하세요.
 
-TODO: 구역 편집 화면 / 경고 발생 화면 / 클립 저장 결과 / 실제 FPS 비교 그래프를 실행 후 삽입합니다. results는 Git 제외이므로 보고서에 포함할 이미지는 검토 후 docs/images/에 별도로 추가하세요.
+## A 팀원과 연결하는 인터페이스
 
-## 현재 상태와 팀원별 다음 작업
+A 파일과 `utils.py`는 수정하지 않았습니다. `RealBackend`가 아래 기존 함수를 호출하므로 A 구현을 병합하면 같은 CLI를 사용합니다.
 
-완료: 폴더·설정·문서, 함수 계약과 TODO, CLI 파싱·기본 설정 검사·폴더 생성·미구현 안내. 기존 미리보기와 utils 구현은 보존했습니다. 미완료: 모든 감지·구역 편집·상태·녹화·스레드·최적화·측정·그래프 기능. 실제 감시 성능은 미측정입니다.
+| 함수 | 입력 → 출력 |
+|---|---|
+| zones.load_zones | JSON 경로, 원본 (w,h) → [{name, points}] |
+| detect.create_background_subtractor | config → 실행별 MOG2 |
+| preprocess.preprocess_frame | BGR uint8, 유효 config, ROI/None → 분석 영상, 변환 dict |
+| detect.detect_motion | 분석 영상, MOG2, 변환된 최소 면적 → 분석 박스 |
+| preprocess.restore_boxes | 분석 박스, 변환 dict → 원본 박스 |
+| detect.check_intrusion | 원본 박스, 구역 → 모든 구역의 bool |
+| state.update_state | 상태, 침입 dict/None, 원본 index, 영상 초, config → 새 상태, 전이 목록 |
 
-1. 공통: 실제 영상·권한·구역 좌표 준비, 인터페이스 검토. B는 전체 설정 검증과 Linux 입력을 검토합니다.
-2. A: zones → preprocess → detect → state. 경계점·빈 검출·N=1·해제·다중 구역·미분석을 검증합니다.
-3. B: baseline 공통 경로 → recorder 및 사건 CSV. 버퍼 시작/EOF·겹침·writer 실패를 확인합니다.
-4. C: benchmark 원자료·집계, 수동 정답, 실험기록을 준비하고 baseline을 실측합니다.
-5. B: threaded 종료/예외/큐 → optimized ROI·축소·간격·지연 관리. A와 좌표·상태 의미를 검증합니다.
-6. C: 동일 조건 반복 비교, 병목·정확도·지연 분석, 최종보고서 작성. 모든 팀원이 통합 시연합니다.
+박스는 (x,y,w,h), points는 [[x,y],...], transform은 offset_x/offset_y/scale_x/scale_y이며 scale은 분석/입력 비율입니다. 다각형 침입은 기존 A 계약대로 박스 하단 중앙점과 경계를 포함합니다. 구역 JSON 예:
 
-검증 범위와 실행 결과는 작업 완료 보고에 명시합니다. 카메라·GUI·실제 감시·성능은 해당 환경에서 추가 검증해야 합니다.
+```json
+{"schema_version":1,"frame_size":[1280,720],"zones":[{"name":"위험구역 A","points":[[100,100],[400,100],[400,400]]}]}
+```
 
-### 초기 구조 검증 기록 (2026-09-21)
+전이는 `{type: "alert"|"cleared", event_id, zone_name, media_time_s}`를 포함해야 합니다. 사건 ID는 alert와 cleared에서 같아야 합니다. 상태 dict의 각 구역은 `status`를 포함하며 IDLE/DETECTING/ALERT/CLEARED를 사용합니다. B는 선택적 `start_time_s`, `end_time_s`를 지원하지만 A에게 새 필드를 강제하지 않습니다. 없으면 B의 관측 메타데이터로 보완합니다. A가 반환하는 기존 `duration_s`는 CSV의 새로운 지속 시간 정의에 사용하지 않습니다.
 
-실행 확인: `compileall` 문법 검사, 모든 Python 모듈/함수 docstring 존재, 설정 로딩, 세 모드 dry-run(코드 0), 세 감시 모드 미구현 안내(코드 2), 기존 직접 실행 dry-run, queue_max_size=0 거부, 폴더 존재, 메모리 영상 그레이스케일 변환, 기존 FPSMeter 기본 호출. 별도 테스트 파일·성능 수치는 생성하지 않았습니다.
+A의 프레임 간격 의미를 임의로 바꾸지 않습니다. 인터페이스 변경이 필요하면 담당 팀원 합의 후 PR에 이유와 영향을 적으세요. 구역 편집 CLI는 A 완성 이후 연결할 TODO입니다. 화면의 OpenCV 기본 폰트는 한글을 지원하지 않아 구역은 Zone 1/2 순서로 표시하며 이름 매핑은 effective_config.json에 보존합니다.
 
-미검증: 실제 영상/카메라/GUI 미리보기, 패키지 신규 설치, 모든 감지·상태·녹화·스레드·측정 기능. 현재 `.git`이 유효한 저장소로 인식되지 않아 Git diff/status 기반 검증은 수행하지 못했습니다. 기존 파일은 직접 읽어 확인했으며 utils는 docstring 외 구현을 보존했습니다.
+## 설정값
+
+기본값은 검증된 최적값이 아닌 초기 실험 제안입니다.
+
+| 키 | 기본값 | 의미 / 조정 |
+|---|---|---|
+| source / zones_path | data/samples/test.mp4 / data/zones.json | 입력과 원본 구역 파일 |
+| mog2.history / var_threshold / detect_shadows | 500 / 16.0 / true | A가 사용하는 동일 MOG2 기준 |
+| min_area / blur_kernel | 200 / 5 | 입력 좌표 면적 / 양의 홀수 커널 |
+| canny_low / canny_high | 50 / 150 | 기존 키 보존, MOG2 기본 경로에서는 미사용 |
+| consecutive_frames / clear_frames | 5 / 10 | A의 연속 원본 감지 / 해제 기준 |
+| pre_seconds / post_seconds | 3.0 / 5.0 | 사전 / 경보 해제 후 녹화 초 |
+| analysis_resolution | [640,360] | optimized 분석 최대 크기; 종횡비 처리는 A 계약 |
+| resize_enabled / roi_enabled | true / false | optimized 분석 축소 / ROI |
+| roi_margin | 32 | 입력 좌표계 ROI 여유 픽셀 |
+| frame_interval | 1 | optimized에서 매 N번째 분석; 생략은 None |
+| queue_max_size / queue_policy | 8 / block | 제한 큐 크기 / 원본 보존 정책; drop_oldest 거부 |
+| measure_fps / warmup_frames | true / 30 | 계측 / 실행 최초 집계 제외 원본 프레임 수 |
+| no_display / mock_detection | false / false | GUI 생략 / 명시적 시험 backend |
+| recording_enabled / recording_codec | true / mp4v | 영상 저장 / fourcc |
+| recorder_max_mb | 1024 | 사전 버퍼 상한; 큐·writer 메모리는 별도 |
+| output_dir | results | 결과 루트; Mock은 항상 하위 mock/ |
+| input_resolution | null | null이면 원본; suite에서 입력 크기 변경, 녹화는 원본 유지 |
+| experiment_kind | throughput | 최대 처리량 또는 realtime 재생 |
+| timestamp_mode | cfr | 파일 index/FPS; VFR은 pts를 명시 |
+| camera_fps | 30.0 | 카메라 nominal FPS를 못 읽었을 때 CFR 출력 기준 |
+| duration_seconds / loop_video | 0.0 / false | 측정 벽시계 제한(0=EOF) / EOF 재생 반복 |
+| thread_join_timeout | 5.0 | 종료 대기 상한; 블로킹 카메라 read는 장치별 한계 |
+
+테스트에서만 `mock_events=[{zone_name, start, alert, end}]` 시간표를 설정할 수 있습니다. B는 B/C 범위를 검증하며 A의 전체 MOG2·다각형 유효성 검사는 A 책임입니다.
+
+## Benchmark 실행과 측정 정의
+
+영상 출처·촬영일·권한은 data/SOURCES.md에 작성합니다. 비침입, 짧은 침입, 장시간 침입, 경계, 다중 구역, 조명 변화, EOF 직전 사건을 촬영하고 정답을 작성하세요. 실제 영상은 현재 포함되어 있지 않습니다.
+
+공식 실험은 **640×480, 1280×720, 1920×1080 × 세 모드 × 3회**, 조건당 warm-up 이후 **벽시계 60초 이상**입니다. 같은 파일을 사용하며 반복 순서는 교차합니다.
+
+```bash
+python -m src.benchmark --source data/samples/test.mp4 --no-display --seconds 60 --repeats 3 --experiment-kind throughput
+python -m src.benchmark --source data/samples/test.mp4 --no-display --seconds 60 --repeats 3 --experiment-kind realtime
+python -m src.benchmark --source data/samples/test.mp4 --no-display --ablations
+```
+
+`--ablations`는 optimized의 none/ROI만/축소만/간격만/큐 크기만 조건을 추가합니다. standard optimized는 config의 조합입니다. 드롭 실험은 비활성 상태입니다. 위 명령도 A 구현이 필요합니다. 자동화 연결만 확인하려면 `--mock-detection`을 추가하되 결과는 실제 성능으로 사용하지 않습니다. 이번 작업에서 공식 60초×3회 측정은 수행하지 않았습니다.
+
+짧은 파일은 실제 파일을 다시 읽습니다. 경계에서 MOG2·상태를 초기화하고 기존 클립은 truncated로 종료합니다. 시각은 누적 offset으로 단조 증가합니다. **warm-up 제외는 실행 최초에만 적용**하며 이후 반복 경계의 재학습·초기화 비용은 측정에 포함합니다. 경계 초기화로 인한 오경보·사건 절단은 실제 연속 촬영 성능과 다르므로 정확도 평가는 반복 없는 단일 영상 실행으로 합니다.
+
+- `throughput`: 파일을 가능한 빨리 처리합니다. 원본 FPS와 처리량 FPS는 다릅니다.
+- `realtime`: perf_counter 예정 입력 시각에 맞춰 파일 프레임을 투입합니다. 느린 처리로 일정이 밀려도 과거 프레임을 버리지 않습니다. 카메라는 항상 실제 취득 시각을 사용합니다.
+- `read_ms`: 디코드 및 실험 입력 리사이즈, 의도한 재생 대기는 제외합니다.
+- `queue_wait_ms`: 준비된 프레임의 큐 backpressure·대기 시간.
+- `preprocess/detect/intrusion/state/record/display_ms`: 각 단계의 perf_counter 차이. 미실행 단계는 빈칸입니다.
+- `total_ms`: read + queue_wait + 메인 처리 시간. 멀티스레드 단계가 겹치므로 표본 합을 전체 벽시계 시간으로 해석하지 않습니다.
+- `throughput_fps`: warm-up 이후 분석 완료 수 / 측정 시작~마지막 완료 경과 초. `mean/median/std/p95_fps`는 연속 분석 완료 간격의 역수 표본 통계입니다. 표준편차는 ddof=0입니다.
+- 각 단계와 지연도 평균·중앙값·표준편차·95백분위수를 기록합니다. 분모/표본이 없으면 빈칸/NaN이며 임의로 0을 넣지 않습니다.
+- `alert_delay_s`: 최초 침입 **관측**부터 경보까지 영상 초. 실제 정답 기준 지연은 별도 사건 매칭 결과입니다.
+- `system_alert_delay_ms`: 해당 프레임의 실제 투입부터 경보까지. `scheduled_alert_delay_ms`: 실시간 파일의 예정 입력부터 경보까지로 backpressure 지연도 포함합니다.
+- 동시 여러 경보가 있는 프레임의 raw 지연은 그 프레임 경보의 평균입니다. 사건별 정확한 값은 events.csv를 사용합니다.
+
+입력·표시·저장 조건은 동일하게 고정하고 CPU/OS/OpenCV·원본 해시·config를 보관하세요. raw 표본은 메모리에 모아 종료 후 저장하므로 긴 실행에서는 계측 메모리도 증가합니다. CSV·그래프 저장 시간은 처리 FPS에서 제외합니다.
+
+## 결과 저장 위치와 그래프
+
+일반 실제 실행은 `results/`, Mock 실행은 `results/mock/`가 결과 루트입니다.
+
+| 파일 | 내용 |
+|---|---|
+| events.csv | 누적 사건별 기록, 중복 없는 실행 ID |
+| benchmark_raw.csv | 종료 시 일괄 저장한 프레임 원자료 |
+| benchmark_summary.csv | 실행 조건별 FPS·단계·지연 통계 |
+| runs/<run_id>/events.csv | 해당 실행만의 사건표 |
+| runs/<run_id>/clips/*.mp4 | 원본 해상도의 독립 사건 클립 |
+| runs/<run_id>/clips.csv | 실제 클립 범위·truncated·재표본화 정보 |
+| runs/<run_id>/benchmark_*.csv | 해당 실행의 원자료와 요약 |
+| runs/<run_id>/effective_config.json | 유효 설정, 구역, 패키지·OS, 원본 해시 |
+| runs/<run_id>/status.json | 성공/실패, 오류, 입력·처리·종료 대기 프레임 수 |
+
+공식 suite는 서로 다른 실험을 섞지 않도록 `results/[mock/]throughput 또는 realtime/suite-<id>/`에 같은 파일명을 저장합니다. 종료 후 다음 세 그래프를 만듭니다.
+
+- `fps_comparison.png`: 해상도별 baseline/threaded/optimized standard의 반복 평균 처리량.
+- `stage_latency.png`: 해상도·모드별 standard 단계 평균.
+- `optimization_comparison.png`: optimized variant별 처리량.
+
+데이터가 없거나 완료한 실행이 없으면 그래프를 생성하지 않고 메시지를 출력합니다. 기존 파일은 자동 삭제하지 않으므로 새 출력 폴더를 사용하세요. Mock 그래프에는 MOCK 표기를 넣습니다. 서로 다른 source·실험 종류·Mock/실제 혼합은 거부합니다. 직접 모은 일반 실행도 출력 조건·config가 동일한지 확인한 뒤 사용하세요.
+
+```bash
+python -m src.benchmark --plot-only results/benchmark_summary.csv --output-dir results
+```
+
+## 감지 정확도 검증 준비
+
+[정답 템플릿](docs/ground_truth_template.csv)을 복사해 `video_name,zone_name,start_time,end_time,event_type`을 작성합니다. 시각은 파일 시작 기준 초, event_type은 `intrusion` 또는 `normal`입니다. 아직 실제 행은 없습니다.
+
+`src.benchmark.evaluate_events(truth_rows, event_rows, video_name=..., tolerance_s=0.0)`는 단일 실행 결과를 구역·시간 구간으로 일대일 최대 매칭합니다. 기본 허용 오차는 **0초**이며 변경 시 기록합니다. 한 정답에 여러 경보가 있어도 정상 감지는 한 번입니다. 나머지 중복 경보는 오경보에 포함합니다.
+
+- 실제 사건 수 = 정답 intrusion 행 수.
+- 정상 감지 = 일대일 매칭 수, 미검출 = 정답 intrusion - 매칭.
+- 오경보 = 전체 경보 - 매칭.
+- **오경보율 = 오경보 수 / 전체 경보 수**(false discovery ratio). 정상 프레임 기반 FPR과 다릅니다.
+- **미검출률 = 미검출 수 / 실제 intrusion 사건 수**.
+- 평균 경고 지연 = 매칭된 경보 alert_time - 정답 start_time.
+
+분모가 0이면 NaN입니다. normal 구간은 검토 주석이며 TN 개수를 임의로 만들지 않습니다. Mock·여러 run_id·미종료 사건은 평가를 거부합니다. 반복 재생 결과의 전역 시간과 단일 영상 정답을 직접 비교하지 마세요. 정확도 평가는 warm-up 구간 포함 여부·수동 라벨 오차를 팀에서 먼저 확정합니다.
+
+## 현재 검증과 한계, 다음 작업
+
+B·C 기능은 pytest의 작은 합성 프레임·임시 영상으로 검증합니다. 합성 자료는 테스트 임시 폴더에만 생성하며 실제 촬영·성능 결과로 기록하지 않습니다. 실제 영상·GUI·카메라·A 구현과의 종단 간 성능은 미검증입니다.
+
+- A: zones/preprocess/detect/state를 기존 계약으로 구현 후 병합. N=1·경계·다중 구역·생략·해제를 확인합니다.
+- B: 실제 장치의 FPS·PTS·codec·GUI를 확인하고 독립 녹화 보존 경로를 만든 뒤 드롭 정책을 검토합니다.
+- C: 실제 영상·정답 확보 후 단일 영상 정확도 평가 → 60초×3회 공식 실험 → 병목·지연·정확도 분석을 수행합니다.
+- 공통: 긴 녹화의 메모리·디스크 사용량, 강제 종료 시 데이터 보존, 카메라 read가 종료 신호를 무시하는 장치의 격리 방식을 검토합니다. 현재 join timeout은 오류를 보고하지만 장치 내부 블로킹을 강제로 해제하지 못합니다.
+
+## 스크린샷 및 보고서
+
+TODO: 실제 구역 편집 화면, 경고·녹화 화면, 클립 확인, 실제 FPS·단계·최적화 그래프를 삽입합니다. 결과 수치와 개선율은 미측정 상태이며 [실험기록](docs/실험기록.md), [최종보고서](docs/최종보고서.md)에 실제 실행 후 작성합니다. 배포할 이미지는 검토 후 docs/images/에 별도로 추가합니다.
 
 ## GitHub 협업 방법
 
-원본 저장소는 [whrjsdnr/opencv_teamproject](https://github.com/whrjsdnr/opencv_teamproject)입니다. 각 팀원은 GitHub에서 원본을 자신의 계정으로 **Fork**한 뒤 개인 Fork를 Clone합니다.
+원본 저장소: [whrjsdnr/opencv_teamproject](https://github.com/whrjsdnr/opencv_teamproject). 팀원은 각자 Fork하고 개인 기능 브랜치에서 작업합니다.
 
 ```bash
 git clone https://github.com/YOUR_GITHUB_ID/opencv_teamproject.git
@@ -236,6 +327,8 @@ git fetch upstream
 git switch -c feature/detection upstream/main
 ```
 
-`YOUR_GITHUB_ID`는 자신의 계정으로 바꿉니다. A는 `feature/detection`, B는 `feature/pipeline`, C는 `feature/benchmark`에서 개발합니다. 개인 Fork의 브랜치에 Push하고 원본 저장소 main으로 PR을 생성하여 리뷰 후 병합합니다. 원본 main 직접 Push는 최초 등록 이후 사용하지 않습니다.
+A는 feature/detection, B는 feature/pipeline, C는 feature/benchmark를 사용합니다. 이번 B·C 통합 구현은 `feature/pipeline-benchmark`에서 작업합니다. 원본 main 직접 Push 대신 PR·리뷰를 거칩니다. 공통 파일 및 함수 계약 변경은 관련 팀원에게 공유하세요. 자세한 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요.
 
-담당 파일, 최신 main 동기화, Commit 규칙과 PR 템플릿은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요. 위 초기 구조 검증 기록의 Git 상태는 초기 설계 당시의 기록입니다.
+### 이번 B·C 구현 검증 환경
+
+Python 3.10.21, OpenCV contrib 4.10.0.84 (`cv2.__version__=4.10.0`), NumPy 1.26.4, Pandas 2.2.2, Matplotlib 3.8.4, pytest 9.1.1의 격리 `.venv`에서 검증했습니다. `pip check`는 정상입니다. Matplotlib 3.8.4와 설치된 pyparsing 조합의 deprecation 경고는 테스트 실패가 아닙니다. 최종 pytest 결과는 33 passed이며, 문법 검사·CLI dry-run·빈 데이터 그래프 처리·A 및 utils 무변경도 확인했습니다. 실제 영상·카메라·GUI·공식 성능 실험은 미검증입니다.
