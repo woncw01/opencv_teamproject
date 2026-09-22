@@ -1,31 +1,112 @@
-"""목적: 구역별 IDLE, DETECTING, ALERT, CLEARED 상태 및 사건 메타데이터
-담당 팀원: A
-입력 데이터: 구역별 감지 bool 또는 None, 영상 시각
-출력 데이터: 상태 dict와 사건 전이 목록
-의존 관계: 표준 라이브러리; pipeline이 recorder와 CSV 연결
-구현 TODO: 연속 감지, 해제, 독립 구역 상태; 파일 저장 금지
-상태: 인터페이스 설계만 완료. 함수 본문은 미구현.
-"""
 from __future__ import annotations
 
 from typing import Any
-import numpy as np
 
 STATES = ("IDLE", "DETECTING", "ALERT", "CLEARED")
 
-def update_state(states: dict[str, dict[str, Any]], intrusions: dict[str, bool] | None, frame_index: int, media_time_s: float, config: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+
+def update_state(
+    states: dict[str, dict[str, Any]],
+    intrusions: dict[str, bool] | None,
+    frame_index: int,
+    timestamp: float,
+    consecutive_frames: int = 1,
+    clear_frames: int = 10,
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """[담당: 팀원 A]
     목적: 구역별 상태 전이 계산
-    매개변수 / 입력 타입: states: 초기 {}; intrusions: 구역 bool 또는 미분석 None; frame_index: 원본 인덱스; media_time_s: 영상 초; config: 설정
-    반환 / 출력 타입: (새 states, 사건 목록); 상세 필드는 README 참조
-    구현 순서 TODO:
-        1. IDLE에서 True면 DETECTING, N번째 연속 True에서 ALERT (N=1 즉시)
-        2. False면 감지 카운터 초기화; ALERT 중 해제 기준 연속 False면 CLEARED
-        3. CLEARED 다음 분석에서 IDLE 기준으로 재판정
-        4. alert/cleared 사건 생성; 지속 시간은 clear 시각-alert 시각
-    예외 및 경계 조건: None은 카운터 증가 금지, 연속 카운터 초기화·ALERT 유지; 인덱스 공백에도 초기화; 시각 역행 ValueError
-    모듈 연결: pipeline이 전이를 recorder에 전달하고 CSV 기록
+    입력:
+      states: 구역별 상태 dict. 최초 호출 시 {} 전달 (내부에서 구역별로 자동 초기화)
+      intrusions: {구역 이름: bool} 또는 미분석 프레임이면 None
+      frame_index: 현재 프레임 인덱스
+      timestamp: 현재 프레임 시각(초)
+      consecutive_frames: ALERT로 전환하기 위한 연속 True 프레임 수 (기본 1 = 즉시 ALERT)
+      clear_frames: ALERT에서 CLEARED로 전환하기 위한 연속 False 프레임 수
+    반환:
+      (새 states, 이번 호출에서 새로 발생한 사건 목록)
+      사건 형태: {"type": "alert"|"cleared", "zone_name": str,
+                 "frame_index": int, "media_time_s": float}
+
+    상태 전이 규칙:
+      1. IDLE에서 True 들어오면 DETECTING 진입, 연속 True가 consecutive_frames번째가 되는
+         순간 ALERT로 전환하고 alert 사건 발행 (consecutive_frames=1이면 즉시 ALERT)
+      2. ALERT 중 False가 연속 clear_frames번 들어오면 CLEARED로 전환하고 cleared 사건 발행
+      3. CLEARED 상태에서 다음 분석 프레임은 IDLE 기준으로 재판정
+      4. intrusions가 None(미분석 프레임)이면 카운터를 초기화하지 않고 현재 상태를 그대로 유지
     """
-    raise NotImplementedError("구역별 상태 전이 계산: 구현 예정")
+    if intrusions is None:
+        # 미분석 프레임: 상태와 카운터 모두 그대로 유지
+        return states, []
 
+    events: list[dict[str, Any]] = []
+    new_states = dict(states)
 
+    for zone_name, is_intruding in intrusions.items():
+        zone_state = new_states.get(zone_name, {
+            "state": "IDLE",
+            "consec_true": 0,
+            "consec_false": 0,
+            "alert_time_s": None,
+        })
+        # CLEARED는 다음 판정 시점에 IDLE 기준으로 재시작
+        if zone_state["state"] == "CLEARED":
+            zone_state = {
+                "state": "IDLE",
+                "consec_true": 0,
+                "consec_false": 0,
+                "alert_time_s": None,
+            }
+
+        state = zone_state["state"]
+
+        if state == "IDLE":
+            if is_intruding:
+                zone_state["consec_true"] = 1
+                zone_state["state"] = "DETECTING"
+                if zone_state["consec_true"] >= consecutive_frames:
+                    zone_state["state"] = "ALERT"
+                    zone_state["alert_time_s"] = timestamp
+                    events.append({
+                        "type": "alert",
+                        "zone_name": zone_name,
+                        "frame_index": frame_index,
+                        "media_time_s": timestamp,
+                    })
+            # False면 IDLE 유지, 카운터 변화 없음
+
+        elif state == "DETECTING":
+            if is_intruding:
+                zone_state["consec_true"] += 1
+                if zone_state["consec_true"] >= consecutive_frames:
+                    zone_state["state"] = "ALERT"
+                    zone_state["alert_time_s"] = timestamp
+                    events.append({
+                        "type": "alert",
+                        "zone_name": zone_name,
+                        "frame_index": frame_index,
+                        "media_time_s": timestamp,
+                    })
+            else:
+                # 연속이 끊기면 DETECTING 취소하고 IDLE로 복귀
+                zone_state["state"] = "IDLE"
+                zone_state["consec_true"] = 0
+
+        elif state == "ALERT":
+            if is_intruding:
+                zone_state["consec_false"] = 0  # 여전히 침입 중 -> 해제 카운터 리셋
+            else:
+                zone_state["consec_false"] += 1
+                if zone_state["consec_false"] >= clear_frames:
+                    zone_state["state"] = "CLEARED"
+                    events.append({
+                        "type": "cleared",
+                        "zone_name": zone_name,
+                        "frame_index": frame_index,
+                        "media_time_s": timestamp,
+                        "alert_time_s": zone_state["alert_time_s"],
+                    })
+                    zone_state["consec_false"] = 0
+
+        new_states[zone_name] = zone_state
+
+    return new_states, events
