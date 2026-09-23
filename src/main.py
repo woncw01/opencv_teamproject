@@ -92,14 +92,14 @@ def main(argv=None) -> int:
             return preview(source, config['no_display'])
         return run_pipeline(source, args.mode, config)
     except NotImplementedError as exc:
-        print(f'[A 미구현] {exc}. B/C 검증에는 명시적으로 --mock-detection을 사용하세요.', file=sys.stderr)
+        print(f'[미구현] {exc}. B/C 검증에는 --mock-detection을 사용하세요')
         return 2
     except (OSError, ValueError, KeyError, TypeError, RuntimeError, cv2.error) as exc:
         print(f'[ERROR] {exc}', file=sys.stderr)
+        raise
         return 2
     except KeyboardInterrupt:
         return 130
-
 
 if __name__ == '__main__':
     raise SystemExit(main())
